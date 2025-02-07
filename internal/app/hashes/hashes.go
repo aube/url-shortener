@@ -7,7 +7,7 @@ import (
 
 var urlsMap = make(map[string]string)
 
-func hashCalc(body []byte) string {
+func CalcHash(body []byte) string {
 	// TODO:
 	// var hash uint32 = crc32.ChecksumIEEE([]byte(data))
 
@@ -25,7 +25,7 @@ func GetURLHash(id string) string {
 }
 
 func SetURLHash(body []byte) string {
-	hash := hashCalc(body)
+	hash := CalcHash(body)
 	urlsMap[hash] = string(body)
 	return hash
 }

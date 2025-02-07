@@ -5,15 +5,14 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	hashes "github.com/aube/url-shortener/internal/app/hashes"
+	"github.com/aube/url-shortener/internal/app/hashes"
 )
 
-const portNumber = "8080"
+// const portNumber = "8080"
 
 func HandlerRoot(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
-		w.WriteHeader(http.StatusCreated)
 		fmt.Println(r.Method)
 
 		// Read the entire body content
@@ -21,10 +20,16 @@ func HandlerRoot(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
-			return
+			break
 		}
 		defer r.Body.Close()
 
+		if len(body) == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			break
+		}
+
+		w.WriteHeader(http.StatusCreated)
 		hash := hashes.SetURLHash(body)
 
 		fmt.Fprintf(w, "http://localhost:8080/"+hash)

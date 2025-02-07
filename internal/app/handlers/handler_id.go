@@ -19,8 +19,14 @@ func HandlerId(w http.ResponseWriter, r *http.Request) {
 
 		url := hashes.GetURLHash(id)
 
+		if url == "" {
+			http.Error(w, "URL not found", http.StatusBadRequest)
+			return
+		}
+
 		fmt.Println("ID:", id)
 		fmt.Println("URL:", url)
+
 		w.Header().Set("Location", url)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 
