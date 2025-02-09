@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -14,6 +15,7 @@ var baseURL string
 type EnvConfig struct {
 	BaseURL       string `env:"BASE_URL"`
 	ServerAddress string `env:"SERVER_ADDRESS"`
+	ServerPort    string `env:"SERVER_PORT"`
 }
 
 func getEnvVariables() EnvConfig {
@@ -39,6 +41,10 @@ func config() {
 		serverAddress = envCfg.ServerAddress
 	} else {
 		flag.StringVar(&serverAddress, "a", "localhost:8080", "address and port to run server")
+	}
+
+	if envCfg.ServerPort > "" {
+		serverAddress = strings.Split(serverAddress, ":")[0] + ":" + envCfg.ServerPort
 	}
 
 	flag.Parse()
