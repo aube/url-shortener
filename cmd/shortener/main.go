@@ -8,24 +8,24 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const portNumber = "8080"
-
 func main() {
+	config()
+
 	r := chi.NewRouter()
 
-	r.Post("/", http.HandlerFunc(handlers.HandlerRoot))
-	r.Get("/{id}", http.HandlerFunc(handlers.HandlerId))
+	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+		handlers.HandlerRoot(w, r, linkAddress)
+	})
+	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
+		handlers.HandlerId(w, r)
+	})
 
-	// empty handler for automatic browser favicon request
+	// empty handler for prevent error on automatic browser favicon request
 	r.Get("/favicon.ico", http.HandlerFunc(handlers.HandlerEmpty))
 
-	fmt.Println("Server starting at:", portNumber)
-
-	err := http.ListenAndServe(":"+portNumber, r)
+	err := http.ListenAndServe(serverAddress, r)
 
 	if err != nil {
 		fmt.Println("Error starting server:", err)
-	} else {
-		fmt.Println("Server started at:", portNumber)
 	}
 }

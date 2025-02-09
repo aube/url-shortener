@@ -8,13 +8,9 @@ import (
 	"github.com/aube/url-shortener/internal/app/hashes"
 )
 
-// const portNumber = "8080"
-
-func HandlerRoot(w http.ResponseWriter, r *http.Request) {
+func HandlerRoot(w http.ResponseWriter, r *http.Request, linkAddress string) {
 	switch r.Method {
 	case "POST":
-		fmt.Println(r.Method)
-
 		// Read the entire body content
 		body, err := ioutil.ReadAll(r.Body)
 
@@ -32,8 +28,8 @@ func HandlerRoot(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		hash := hashes.SetURLHash(body)
 
-		fmt.Fprintf(w, "http://localhost:8080/"+hash)
-		fmt.Println("URL:", "http://localhost:8080/"+hash)
+		fmt.Fprintf(w, linkAddress+"/"+hash)
+		fmt.Println("URL:", linkAddress+"/"+hash)
 	default:
 		fmt.Println("Not served method:", r.Method)
 	}
