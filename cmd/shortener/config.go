@@ -29,25 +29,23 @@ func getEnvVariables() EnvConfig {
 
 func config() {
 
+	flag.StringVar(&baseURL, "b", "http://localhost:8080", "address and port for generated link")
+	flag.StringVar(&serverAddress, "a", "localhost:8080", "address and port to run server")
+	flag.Parse()
+
 	envCfg := getEnvVariables()
 
 	if envCfg.BaseURL > "" {
 		baseURL = envCfg.BaseURL
-	} else {
-		flag.StringVar(&baseURL, "b", "http://localhost:8080", "address and port for generated link")
 	}
 
 	if envCfg.ServerAddress > "" {
 		serverAddress = envCfg.ServerAddress
-	} else {
-		flag.StringVar(&serverAddress, "a", "localhost:8080", "address and port to run server")
 	}
 
 	if envCfg.ServerPort > "" {
 		serverAddress = strings.Split(serverAddress, ":")[0] + ":" + envCfg.ServerPort
 	}
-
-	flag.Parse()
 
 	fmt.Println("serverAddress: " + serverAddress)
 }
