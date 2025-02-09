@@ -9,10 +9,10 @@ import (
 )
 
 var serverAddress string
-var baseUrl string
+var baseURL string
 
 type EnvConfig struct {
-	BaseUrl       string `env:"BASE_URL"`
+	BaseURL       string `env:"BASE_URL"`
 	ServerAddress string `env:"SERVER_ADDRESS"`
 }
 
@@ -29,10 +29,10 @@ func config() {
 
 	envCfg := getEnvVariables()
 
-	if envCfg.BaseUrl > "" {
-		baseUrl = envCfg.BaseUrl
+	if envCfg.BaseURL > "" {
+		baseURL = envCfg.BaseURL
 	} else {
-		flag.StringVar(&baseUrl, "b", "http://localhost:8080", "address and port for generated link")
+		flag.StringVar(&baseURL, "b", "http://localhost:8080", "address and port for generated link")
 	}
 
 	if envCfg.ServerAddress > "" {

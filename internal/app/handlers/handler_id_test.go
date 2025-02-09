@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHandlerId(t *testing.T) {
+func TestHandlerID(t *testing.T) {
 
 	fakeAddress := "http://test.test/test"
 	hash := hashes.SetURLHash([]byte(fakeAddress))
@@ -59,10 +60,15 @@ func TestHandlerId(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, tt.request, nil)
 			r.SetPathValue("id", tt.id)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(HandlerId)
+			h := http.HandlerFunc(HandlerID)
 			h(w, r)
 
 			result := w.Result()
+
+			err := result.Body.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 			assert.Equal(t, tt.want.location, result.Header.Get("Location"))

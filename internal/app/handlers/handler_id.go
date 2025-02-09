@@ -7,7 +7,7 @@ import (
 	"github.com/aube/url-shortener/internal/app/hashes"
 )
 
-func HandlerId(w http.ResponseWriter, r *http.Request) {
+func HandlerID(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		id := r.PathValue("id")

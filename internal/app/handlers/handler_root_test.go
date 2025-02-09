@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"io/ioutil"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestHandlerRoot(t *testing.T) {
-	baseUrl := "http://localhost:8080"
+	baseURL := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"
 
 	hash := hashes.CalcHash([]byte(fakeAddress))
@@ -31,7 +32,7 @@ func TestHandlerRoot(t *testing.T) {
 			name: "fakeAddress body",
 			want: want{
 				statusCode:   201,
-				shortAddress: baseUrl + "/" + hash,
+				shortAddress: baseURL + "/" + hash,
 			},
 			postBody: fakeAddress,
 		},
@@ -51,7 +52,7 @@ func TestHandlerRoot(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
 			w := httptest.NewRecorder()
 			h := func(w http.ResponseWriter, r *http.Request) {
-				HandlerRoot(w, r, baseUrl)
+				HandlerRoot(w, r, baseURL)
 			}
 			h(w, r)
 
@@ -59,9 +60,13 @@ func TestHandlerRoot(t *testing.T) {
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 
-			shortAddressResult, err := ioutil.ReadAll(result.Body)
+			shortAddressResult, err := io.ReadAll(result.Body)
 			require.NoError(t, err)
+
 			err = result.Body.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want.shortAddress, string(shortAddressResult))

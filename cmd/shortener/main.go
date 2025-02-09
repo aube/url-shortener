@@ -14,10 +14,10 @@ func main() {
 	r := chi.NewRouter()
 
 	r.Post("/*", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandlerRoot(w, r, baseUrl)
+		handlers.HandlerRoot(w, r, baseURL)
 	})
 	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandlerId(w, r)
+		handlers.HandlerID(w, r)
 	})
 
 	// empty handler for prevent error on automatic browser favicon request
