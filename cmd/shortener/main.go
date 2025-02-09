@@ -14,7 +14,7 @@ func main() {
 	r := chi.NewRouter()
 
 	r.Post("/*", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandlerRoot(w, r, linkAddress)
+		handlers.HandlerRoot(w, r, baseUrl)
 	})
 	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
 		handlers.HandlerId(w, r)

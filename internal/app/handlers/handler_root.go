@@ -24,7 +24,7 @@ func readUrlFromJson(body []byte) []byte {
 	return []byte(jsonBody.URL)
 }
 
-func HandlerRoot(w http.ResponseWriter, r *http.Request, linkAddress string) {
+func HandlerRoot(w http.ResponseWriter, r *http.Request, baseUrl string) {
 	switch r.Method {
 	case "POST":
 		// Read the entire body content
@@ -50,7 +50,7 @@ func HandlerRoot(w http.ResponseWriter, r *http.Request, linkAddress string) {
 		}
 
 		hash := hashes.SetURLHash(originalUrl)
-		shortUrl := linkAddress + "/" + hash
+		shortUrl := baseUrl + "/" + hash
 
 		if contentType == "application/json" {
 			w.Header().Set("Content-Type", "application/json")

@@ -13,7 +13,7 @@ import (
 )
 
 func TestHandlerRoot(t *testing.T) {
-	linkAddress := "http://localhost:8080"
+	baseUrl := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"
 
 	hash := hashes.CalcHash([]byte(fakeAddress))
@@ -31,7 +31,7 @@ func TestHandlerRoot(t *testing.T) {
 			name: "fakeAddress body",
 			want: want{
 				statusCode:   201,
-				shortAddress: linkAddress + "/" + hash,
+				shortAddress: baseUrl + "/" + hash,
 			},
 			postBody: fakeAddress,
 		},
@@ -51,7 +51,7 @@ func TestHandlerRoot(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
 			w := httptest.NewRecorder()
 			h := func(w http.ResponseWriter, r *http.Request) {
-				HandlerRoot(w, r, linkAddress)
+				HandlerRoot(w, r, baseUrl)
 			}
 			h(w, r)
 
