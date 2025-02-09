@@ -13,7 +13,7 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/*", func(w http.ResponseWriter, r *http.Request) {
 		handlers.HandlerRoot(w, r, linkAddress)
 	})
 	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
