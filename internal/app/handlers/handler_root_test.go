@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aube/url-shortener/internal/app/hashes"
+	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +17,7 @@ func TestHandlerRoot(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"
 
-	hash := hashes.CalcHash([]byte(fakeAddress))
+	hash := hasher.CalcHash([]byte(fakeAddress))
 	type want struct {
 		statusCode   int
 		shortAddress string

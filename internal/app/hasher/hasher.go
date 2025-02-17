@@ -1,11 +1,9 @@
-package hashes
+package hasher
 
 import (
 	"crypto/sha1"
 	"fmt"
 )
-
-var urlsMap = make(map[string]string)
 
 func CalcHash(body []byte) string {
 	// TODO:
@@ -18,14 +16,4 @@ func CalcHash(body []byte) string {
 	substringLength := min(10, len(hashString)-1)
 
 	return hashString[:substringLength]
-}
-
-func GetURLHash(id string) string {
-	return urlsMap[id]
-}
-
-func SetURLHash(body []byte) string {
-	hash := CalcHash(body)
-	urlsMap[hash] = string(body)
-	return hash
 }

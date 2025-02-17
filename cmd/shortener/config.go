@@ -9,9 +9,6 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-var serverAddress string
-var baseURL string
-
 type EnvConfig struct {
 	BaseURL       string `env:"BASE_URL"`
 	ServerAddress string `env:"SERVER_ADDRESS"`
@@ -27,7 +24,10 @@ func getEnvVariables() EnvConfig {
 	return cfg
 }
 
-func config() {
+func NewConfig() (string, string) {
+
+	var serverAddress string
+	var baseURL string
 
 	flag.StringVar(&baseURL, "b", "http://localhost:8080", "address and port for generated link")
 	flag.StringVar(&serverAddress, "a", "localhost:8080", "address and port to run server")
@@ -48,4 +48,6 @@ func config() {
 	}
 
 	fmt.Println("serverAddress: " + serverAddress)
+
+	return serverAddress, baseURL
 }
