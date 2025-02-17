@@ -1,17 +1,31 @@
 package store
 
 import (
-	"github.com/aube/url-shortener/internal/app/hasher"
+	"fmt"
 )
 
-var urlsMap = make(map[string]string)
-
-func GetURLHash(id string) string {
-	return urlsMap[id]
+type Storer interface {
+	Get(key string) (value string, ok bool)
+	Set(key string, value string) error
 }
 
-func SetURLHash(body []byte) string {
-	hash := hasher.CalcHash(body)
-	urlsMap[hash] = string(body)
-	return hash
+type MemoryStore struct {
+	data map[string]string
+}
+
+func NewMemoryStore() *MemoryStore {
+	return &MemoryStore{data: make(map[string]string)}
+}
+
+func (s *MemoryStore) Get(key string) (value string, ok bool) {
+	value, ok = s.data[key]
+	return value, ok
+}
+
+func (s *MemoryStore) Set(key string, value string) error {
+	if key == "" || value == "" {
+		return fmt.Errorf("invalid input")
+	}
+	s.data[key] = value
+	return nil
 }

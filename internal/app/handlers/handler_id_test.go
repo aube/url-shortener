@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/aube/url-shortener/internal/app/store"
 	"github.com/stretchr/testify/assert"
 )
@@ -13,7 +14,8 @@ import (
 func TestHandlerID(t *testing.T) {
 
 	fakeAddress := "http://test.test/test"
-	hash := store.SetURLHash([]byte(fakeAddress))
+	hash := hasher.CalcHash([]byte(fakeAddress))
+	store.Set(fakeAddress, hash)
 
 	type want struct {
 		statusCode int

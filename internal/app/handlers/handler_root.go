@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/aube/url-shortener/internal/app/store"
 )
 
@@ -25,6 +26,8 @@ func readURLFromJSON(body []byte) []byte {
 }
 
 func HandlerRoot(w http.ResponseWriter, r *http.Request, baseURL string) {
+
+	MemoryStore := store.NewMemoryStore()
 
 	if r.Body == nil || r.ContentLength == 0 {
 		http.Error(w, "Request body is empty", http.StatusBadRequest)
@@ -49,7 +52,9 @@ func HandlerRoot(w http.ResponseWriter, r *http.Request, baseURL string) {
 		originalURL = readURLFromJSON(body)
 	}
 
-	hash := store.SetURLHash(originalURL)
+	hash := hasher.CalcHash(originalURL)
+	MemoryStore.Set(string(originalURL), hash)
+
 	shortURL := baseURL + "/" + hash
 
 	w.WriteHeader(http.StatusCreated)

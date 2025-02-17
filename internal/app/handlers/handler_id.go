@@ -8,6 +8,8 @@ import (
 )
 
 func HandlerID(w http.ResponseWriter, r *http.Request) {
+	MemoryStore := store.NewMemoryStore()
+
 	id := r.PathValue("id")
 
 	if id == "" {
@@ -15,9 +17,9 @@ func HandlerID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := store.GetURLHash(id)
+	url, ok := MemoryStore.Get(id)
 
-	if url == "" {
+	if url == "" || ok == false {
 		http.Error(w, "URL not found", http.StatusBadRequest)
 		return
 	}
