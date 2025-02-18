@@ -15,7 +15,9 @@ func TestHandlerID(t *testing.T) {
 
 	fakeAddress := "http://test.test/test"
 	hash := hasher.CalcHash([]byte(fakeAddress))
-	store.Set(fakeAddress, hash)
+
+	MemoryStore := store.NewMemoryStore()
+	MemoryStore.Set(hash, fakeAddress)
 
 	type want struct {
 		statusCode int

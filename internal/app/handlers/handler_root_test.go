@@ -41,7 +41,7 @@ func TestHandlerRoot(t *testing.T) {
 			name: "empty body",
 			want: want{
 				statusCode:   400,
-				shortAddress: "",
+				shortAddress: "Request body is empty\n",
 			},
 			postBody: "",
 		},

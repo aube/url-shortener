@@ -53,7 +53,8 @@ func HandlerRoot(w http.ResponseWriter, r *http.Request, baseURL string) {
 	}
 
 	hash := hasher.CalcHash(originalURL)
-	MemoryStore.Set(string(originalURL), hash)
+	MemoryStore.Set(hash, string(originalURL))
+	MemoryStore.Get(hash)
 
 	shortURL := baseURL + "/" + hash
 
