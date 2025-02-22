@@ -51,9 +51,7 @@ func TestHandlerRoot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
 			w := httptest.NewRecorder()
-			h := func(w http.ResponseWriter, r *http.Request) {
-				HandlerRoot(w, r, baseURL)
-			}
+			h := HandlerRoot(baseURL)
 			h(w, r)
 
 			result := w.Result()

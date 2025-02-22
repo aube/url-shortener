@@ -64,7 +64,7 @@ func TestHandlerID(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, tt.request, nil)
 			r.SetPathValue("id", tt.id)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(HandlerID)
+			h := HandlerID()
 			h(w, r)
 
 			result := w.Result()

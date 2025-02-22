@@ -4,10 +4,12 @@ import (
 	"fmt"
 )
 
-type Storage interface {
+// ???
+/* type Storage interface {
 	Get(key string) (value string, ok bool)
 	Set(key string, value string) error
 }
+*/
 
 type MemoryStore struct {
 	s map[string]string
@@ -23,6 +25,7 @@ func init() {
 func NewMemoryStore() *MemoryStore {
 	return data
 }
+
 func (s *MemoryStore) Get(key string) (value string, ok bool) {
 	value, ok = data.s[key]
 	fmt.Println("Get key:value", key, value)

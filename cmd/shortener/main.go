@@ -9,21 +9,23 @@ import (
 )
 
 func main() {
-	serverAddress, baseURL := NewConfig()
+	config := NewConfig()
 
 	r := chi.NewRouter()
 
-	r.Post("/*", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandlerRoot(w, r, baseURL)
-	})
-	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandlerID(w, r)
-	})
+	r.Post("/*", handlers.HandlerRoot(config.BaseURL))
+	r.Get("/{id}", handlers.HandlerID())
 
 	// empty handler for prevent error on automatic browser favicon request
 	r.Get("/favicon.ico", http.HandlerFunc(handlers.HandlerEmpty))
 
-	err := http.ListenAndServe(serverAddress, r)
+	if err := logger.Initialize("info"); err != nil {
+		return
+	}
+
+	logger.Log.Info("Running server", zap.String("address", config.ServerAddress))
+
+	err := http.ListenAndServe(config.ServerAddress+":"+config.ServerPort, r)
 
 	if err != nil {
 		fmt.Println("Error starting server:", err)

@@ -15,6 +15,9 @@ type EnvConfig struct {
 	ServerPort    string `env:"SERVER_PORT"`
 }
 
+var config EnvConfig
+var initialized bool = false
+
 func getEnvVariables() EnvConfig {
 	var cfg EnvConfig
 	err := env.Parse(&cfg)
@@ -24,30 +27,37 @@ func getEnvVariables() EnvConfig {
 	return cfg
 }
 
-func NewConfig() (string, string) {
+func NewConfig() EnvConfig {
 
-	var serverAddress string
-	var baseURL string
+	if initialized {
+		return config
+	}
 
-	flag.StringVar(&baseURL, "b", "http://localhost:8080", "address and port for generated link")
-	flag.StringVar(&serverAddress, "a", "localhost:8080", "address and port to run server")
+	var flagBaseURL string
+	var flagServerAddressPort string
+
+	flag.StringVar(&flagBaseURL, "b", "http://localhost:8080", "address and port for generated link")
+	flag.StringVar(&flagServerAddressPort, "a", "localhost:8080", "address and port to run server")
 	flag.Parse()
 
-	envCfg := getEnvVariables()
+	config = getEnvVariables()
 
-	if envCfg.BaseURL > "" {
-		baseURL = envCfg.BaseURL
+	if config.BaseURL == "" {
+		config.BaseURL = flagBaseURL
 	}
 
-	if envCfg.ServerAddress > "" {
-		serverAddress = envCfg.ServerAddress
+	if config.ServerAddress == "" {
+		config.ServerAddress = strings.Split(flagServerAddressPort, ":")[0]
 	}
 
-	if envCfg.ServerPort > "" {
-		serverAddress = strings.Split(serverAddress, ":")[0] + ":" + envCfg.ServerPort
+	if config.ServerPort == "" {
+		config.ServerPort = strings.Split(flagServerAddressPort, ":")[1]
 	}
 
-	fmt.Println("serverAddress: " + serverAddress)
+	fmt.Println("serverAddress: " + config.ServerAddress)
+	fmt.Println("serverPort: " + config.ServerPort)
 
-	return serverAddress, baseURL
+	initialized = true
+
+	return config
 }
