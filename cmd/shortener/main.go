@@ -4,14 +4,19 @@ import (
 	"fmt"
 	"net/http"
 
+	"go.uber.org/zap"
+
+	"github.com/aube/url-shortener/cmd/shortener/config"
 	"github.com/aube/url-shortener/internal/app/handlers"
+	"github.com/aube/url-shortener/internal/app/store"
 	"github.com/aube/url-shortener/internal/gzip"
 	"github.com/aube/url-shortener/internal/logger"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
-	config := NewConfig()
+	config := config.NewConfig()
+	store.NewFileStore(config.FileStoragePath)
 
 	r := chi.NewRouter()
 

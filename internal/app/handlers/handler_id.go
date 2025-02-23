@@ -18,13 +18,14 @@ func HandlerID() http.HandlerFunc {
 			return
 		}
 
+		fmt.Println("Requested ID:", id)
+
 		url, ok := MemoryStore.Get(id)
 		if url == "" || !ok {
 			http.Error(w, "URL not found", http.StatusBadRequest)
 			return
 		}
 
-		fmt.Println("Requested ID:", id)
 		fmt.Println("URL:", url)
 
 		w.Header().Set("Location", url)
