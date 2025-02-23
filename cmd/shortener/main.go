@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/aube/url-shortener/internal/app/handlers"
+	"github.com/aube/url-shortener/internal/gzip"
+	"github.com/aube/url-shortener/internal/logger"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -13,13 +15,13 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Post("/*", handlers.HandlerRoot(config.BaseURL))
-	r.Get("/{id}", handlers.HandlerID())
+	r.Post("/*", logger.LoggingMiddleware(gzip.GzipMiddleware(handlers.HandlerRoot(config.BaseURL))))
+	r.Get("/{id}", logger.LoggingMiddleware(gzip.GzipMiddleware(handlers.HandlerID())))
 
 	// empty handler for prevent error on automatic browser favicon request
 	r.Get("/favicon.ico", http.HandlerFunc(handlers.HandlerEmpty))
 
-	if err := logger.Initialize("info"); err != nil {
+	if err := logger.Initialize("debug"); err != nil {
 		return
 	}
 
