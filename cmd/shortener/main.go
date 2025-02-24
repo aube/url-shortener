@@ -14,13 +14,18 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func main() {
+func init() {
 	config := config.NewConfig()
 	store.NewFileStore(config.FileStoragePath)
+	store.NewFilesStore(config.FileStorageDir)
+}
 
+func main() {
+	config := config.NewConfig()
 	r := chi.NewRouter()
 
 	r.Post("/*", logger.LoggingMiddleware(gzip.GzipMiddleware(handlers.HandlerRoot(config.BaseURL))))
+	// r.Post("/api/*", logger.LoggingMiddleware(gzip.GzipMiddleware(handlers.HandlerAPI(config.BaseURL))))
 	r.Get("/{id}", logger.LoggingMiddleware(gzip.GzipMiddleware(handlers.HandlerID())))
 
 	// empty handler for prevent error on automatic browser favicon request

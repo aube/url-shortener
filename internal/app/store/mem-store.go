@@ -27,7 +27,7 @@ func NewMemoryStore() *MemoryStore {
 }
 
 func (s *MemoryStore) Get(key string) (value string, ok bool) {
-	value, ok = ReadFile(key)
+	value, ok = ReadFiles(key)
 	fmt.Println("Read key:", key, value, ok)
 	if ok {
 		return value, ok
@@ -43,7 +43,8 @@ func (s *MemoryStore) Set(key string, value string) error {
 		return fmt.Errorf("invalid input")
 	}
 
-	err := WriteFile(key, value)
+	err := WriteFiles(key, value)
+	fmt.Println("Write key:", key, value)
 	if err != nil {
 		panic(err)
 	}

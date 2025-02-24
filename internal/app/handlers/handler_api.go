@@ -9,7 +9,7 @@ import (
 	"github.com/aube/url-shortener/internal/app/store"
 )
 
-func HandlerRoot(baseURL string) http.HandlerFunc {
+func HandlerAPI(baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		MemoryStore := store.NewMemoryStore()
 
@@ -27,30 +27,19 @@ func HandlerRoot(baseURL string) http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-		originalURL := body
-		contentType := r.Header.Get("Content-Type")
-
-		fmt.Println("contentType:", contentType)
-
-		if contentType == "application/json" {
-			originalURL = readURLFromJSON(body)
-		}
-
+		originalURL := readURLFromJSON(body)
 		hash := hasher.CalcHash(originalURL)
+
 		MemoryStore.Set(hash, string(originalURL))
 		MemoryStore.Get(hash)
 
 		shortURL := baseURL + "/" + hash
 
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		if contentType == "application/json" {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
-		} else {
-			fmt.Fprintf(w, "%s", shortURL)
-		}
+
+		fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 
 		fmt.Println("URL:", shortURL, http.StatusCreated)
-
 	}
 }

@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"time"
@@ -76,6 +77,22 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode // захватываем код статуса
 }
 
+func (r *loggingResponseWriter) String() {
+	var buf bytes.Buffer
+
+	buf.WriteString("Response:")
+
+	buf.WriteString("Headers:")
+	for k, v := range r.ResponseWriter.Header() {
+		buf.WriteString(fmt.Sprintf("%s: %v", k, v))
+	}
+
+	// buf.WriteString(fmt.Sprintf("Status Code: %d", r.statusCode))
+
+	// buf.WriteString("Body")
+	// buf.WriteString(r.body.String())
+}
+
 // Сведения о запросах должны содержать URI, метод запроса и время, затраченное на его выполнение.
 // Сведения об ответах должны содержать код статуса и размер содержимого ответа.
 
@@ -116,11 +133,13 @@ func LoggingMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		) */
 
 		sugar.Infoln(
-			"uri", r.RequestURI,
-			"method", r.Method,
-			"status", responseData.status, // получаем перехваченный код статуса ответа
-			"duration", duration,
-			"size", responseData.size, // получаем перехваченный размер ответа
+			responseData.status, // получаем перехваченный код статуса ответа
+			r.Method,
+			r.RequestURI,
+			duration,
+			responseData.size, // получаем перехваченный размер ответа
+			"ce", r.Header.Get("Content-Encoding"),
+			"ct", r.Header.Get("Content-Type"),
 		)
 	}
 }

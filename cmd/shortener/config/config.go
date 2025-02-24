@@ -14,6 +14,7 @@ type EnvConfig struct {
 	ServerAddress   string `env:"SERVER_ADDRESS"`
 	ServerPort      string `env:"SERVER_PORT"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	FileStorageDir  string `env:"FILE_STORAGE_DIR"`
 }
 
 var Config EnvConfig
@@ -36,11 +37,13 @@ func NewConfig() EnvConfig {
 
 	var flagBaseURL string
 	var flagServerAddressPort string
-	var flagFilesDir string
+	var flagStoragePath string
+	var flagStorageDir string
 
 	flag.StringVar(&flagBaseURL, "b", "http://localhost:8080", "address and port for generated link")
 	flag.StringVar(&flagServerAddressPort, "a", "localhost:8080", "address and port to run server")
-	flag.StringVar(&flagFilesDir, "f", "./_hashes", "hashes dir")
+	flag.StringVar(&flagStorageDir, "d", "./_hashes", "hashes dir")
+	flag.StringVar(&flagStoragePath, "f", "./_hashes/hashes_list.json", "hashes file")
 	flag.Parse()
 
 	Config = getEnvVariables()
@@ -50,7 +53,11 @@ func NewConfig() EnvConfig {
 	}
 
 	if Config.FileStoragePath == "" {
-		Config.FileStoragePath = flagFilesDir
+		Config.FileStoragePath = flagStoragePath
+	}
+
+	if Config.FileStorageDir == "" {
+		Config.FileStorageDir = flagStorageDir
 	}
 
 	if Config.ServerAddress == "" {
