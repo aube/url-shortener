@@ -37,7 +37,7 @@ func main() {
 
 	logger.Log.Info("Running server", zap.String("address", config.ServerAddress))
 
-	err := http.ListenAndServe(config.ServerAddress+":"+config.ServerPort, r)
+	err := http.ListenAndServe(config.ServerHost+":"+config.ServerPort, r)
 
 	if err != nil {
 		fmt.Println("Error starting server:", err)

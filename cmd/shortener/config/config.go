@@ -12,7 +12,8 @@ import (
 type EnvConfig struct {
 	BaseURL         string `env:"BASE_URL"`
 	ServerAddress   string `env:"SERVER_ADDRESS"`
-	ServerPort      string `env:"SERVER_PORT"`
+	ServerHost      string
+	ServerPort      string
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	FileStorageDir  string `env:"FILE_STORAGE_DIR"`
 }
@@ -36,12 +37,12 @@ func NewConfig() EnvConfig {
 	}
 
 	var flagBaseURL string
-	var flagServerAddressPort string
+	var flagServerAddress string
 	var flagStoragePath string
 	var flagStorageDir string
 
 	flag.StringVar(&flagBaseURL, "b", "http://localhost:8080", "address and port for generated link")
-	flag.StringVar(&flagServerAddressPort, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&flagServerAddress, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&flagStorageDir, "d", "./_hashes", "hashes dir")
 	flag.StringVar(&flagStoragePath, "f", "./_hashes/hashes_list.json", "hashes file")
 	flag.Parse()
@@ -61,14 +62,14 @@ func NewConfig() EnvConfig {
 	}
 
 	if Config.ServerAddress == "" {
-		Config.ServerAddress = strings.Split(flagServerAddressPort, ":")[0]
+		Config.ServerAddress = flagServerAddress
 	}
 
-	if Config.ServerPort == "" {
-		Config.ServerPort = strings.Split(flagServerAddressPort, ":")[1]
-	}
+	Config.ServerHost = strings.Split(Config.ServerAddress, ":")[0]
+	Config.ServerPort = strings.Split(Config.ServerAddress, ":")[1]
 
 	fmt.Println("serverAddress: " + Config.ServerAddress)
+	fmt.Println("serverHost: " + Config.ServerHost)
 	fmt.Println("serverPort: " + Config.ServerPort)
 
 	initialized = true
