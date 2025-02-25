@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/aube/url-shortener/internal/app/store"
@@ -29,11 +30,20 @@ func HandlerRoot(baseURL string) http.HandlerFunc {
 
 		originalURL := body
 		contentType := r.Header.Get("Content-Type")
+		responseContentType := contentType
+		contentTypeJSON := strings.Contains(contentType, "application/json")
+		acceptHeaderJSON := strings.Contains(r.Header.Get("Accept"), "application/json")
 
-		fmt.Println("contentType:", contentType)
+		responseContentJSON := contentTypeJSON || acceptHeaderJSON
 
-		if contentType == "application/json" {
+		fmt.Println(
+			"Request contentType:", contentType,
+			"Response contentType:", responseContentType,
+		)
+
+		if responseContentJSON {
 			originalURL = readURLFromJSON(body)
+			responseContentType = "application/json"
 		}
 
 		hash := hasher.CalcHash(originalURL)
@@ -42,9 +52,10 @@ func HandlerRoot(baseURL string) http.HandlerFunc {
 
 		shortURL := baseURL + "/" + hash
 
+		w.Header().Set("Content-Type", responseContentType)
 		w.WriteHeader(http.StatusCreated)
-		if contentType == "application/json" {
-			w.Header().Set("Content-Type", "application/json")
+
+		if responseContentJSON {
 			fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 		} else {
 			fmt.Fprintf(w, "%s", shortURL)

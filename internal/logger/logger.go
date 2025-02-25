@@ -140,6 +140,7 @@ func LoggingMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			responseData.size, // получаем перехваченный размер ответа
 			"ce", r.Header.Get("Content-Encoding"),
 			"ct", r.Header.Get("Content-Type"),
+			// "-", w.Header()["Content-Type"],
 		)
 	}
 }
