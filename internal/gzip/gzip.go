@@ -2,6 +2,7 @@ package gzip
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -79,20 +80,22 @@ func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		ow := w
 
 		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
-		/* acceptEncoding := r.Header.Get("Accept-Encoding")
+		acceptEncoding := r.Header.Get("Accept-Encoding")
 		supportsGzip := strings.Contains(acceptEncoding, "gzip")
 		if supportsGzip {
 			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
-			// cw := newCompressWriter(w)
+			cw := newCompressWriter(w)
 			// меняем оригинальный http.ResponseWriter на новый
 			ow = cw
 			// не забываем отправить клиенту все сжатые данные после завершения middleware
 			defer cw.Close()
-		} */
+		}
 
 		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
 		contentEncoding := r.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
+
+		fmt.Println("sendsGzip", sendsGzip)
 		if sendsGzip {
 			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
 			cr, err := newCompressReader(r.Body)
@@ -102,7 +105,7 @@ func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			}
 
 			// меняем тело запроса на новое
-			// r.Body = cr
+			r.Body = cr
 			defer cr.Close()
 		}
 

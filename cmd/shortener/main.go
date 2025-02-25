@@ -17,7 +17,7 @@ import (
 func init() {
 	config := config.NewConfig()
 	store.NewFileStore(config.FileStoragePath)
-	store.NewFilesStore(config.FileStorageDir)
+	// store.NewFilesStore(config.FileStorageDir)
 }
 
 func main() {
@@ -26,6 +26,7 @@ func main() {
 
 	r.Post("/*", logger.LoggingMiddleware(gzip.GzipMiddleware(handlers.HandlerRoot(config.BaseURL))))
 	r.Post("/api/*", logger.LoggingMiddleware(gzip.GzipMiddleware(handlers.HandlerAPI(config.BaseURL))))
+	r.Get("/api/user/urls", logger.LoggingMiddleware(handlers.HandlerAPIUserUrls(config.BaseURL)))
 	r.Get("/{id}", logger.LoggingMiddleware(gzip.GzipMiddleware(handlers.HandlerID())))
 
 	// empty handler for prevent error on automatic browser favicon request
