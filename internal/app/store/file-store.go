@@ -97,7 +97,7 @@ func WriteToFile(key string, value string) error {
 		return err
 	}
 
-	if _, err = f.WriteString(string(json)); err != nil {
+	if _, err = f.WriteString(string(json) + "\n"); err != nil {
 		return err
 	}
 
