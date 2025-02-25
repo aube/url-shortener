@@ -41,6 +41,8 @@ func (s *MemoryStore) Set(key string, value string) error {
 	fmt.Println("Set key:", key, value)
 	memData.s[key] = value
 
+	WriteToFile(key, value)
+
 	return nil
 }
 

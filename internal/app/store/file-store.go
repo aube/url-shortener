@@ -86,6 +86,21 @@ func NewFileStore(storagePath string) {
 }
 
 func WriteToFile(key string, value string) error {
-	err := os.WriteFile(storagePathFile, []byte(value), 0644)
-	return err
+	f, err := os.OpenFile(storagePathFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	json, err := json.Marshal(itemURL{Hash: key, URL: value})
+	if err != nil {
+		return err
+	}
+
+	if _, err = f.WriteString(string(json)); err != nil {
+		return err
+	}
+
+	fmt.Println("WriteToFile:", json)
+	return nil
 }
