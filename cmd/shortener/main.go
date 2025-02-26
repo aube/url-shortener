@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.uber.org/zap"
-
 	"github.com/aube/url-shortener/cmd/shortener/config"
 	"github.com/aube/url-shortener/internal/app/handlers"
 	"github.com/aube/url-shortener/internal/app/store"
@@ -17,7 +15,6 @@ import (
 func init() {
 	config := config.NewConfig()
 	store.NewFileStore(config.FileStoragePath)
-	// store.NewFilesStore(config.FileStorageDir)
 }
 
 func main() {
@@ -32,11 +29,9 @@ func main() {
 	// empty handler for prevent error on automatic browser favicon request
 	r.Get("/favicon.ico", http.HandlerFunc(handlers.HandlerEmpty))
 
-	if err := logger.Initialize("debug"); err != nil {
+	if err := logger.Initialize(); err != nil {
 		return
 	}
-
-	logger.Log.Info("Running server", zap.String("address", config.ServerAddress))
 
 	err := http.ListenAndServe(config.ServerHost+":"+config.ServerPort, r)
 

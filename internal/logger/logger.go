@@ -10,9 +10,8 @@ import (
 )
 
 var sugar zap.SugaredLogger
-var Log *zap.Logger = zap.NewNop()
 
-func InitializeSugar() error {
+func Initialize() error {
 	// преобразуем текстовый уровень логирования в zap.AtomicLevel
 	logger, err := zap.NewDevelopment()
 	if err != nil {
@@ -22,30 +21,6 @@ func InitializeSugar() error {
 
 	// делаем регистратор SugaredLogger
 	sugar = *logger.Sugar()
-
-	return nil
-}
-
-func Initialize(level string) error {
-	// преобразуем текстовый уровень логирования в zap.AtomicLevel
-	lvl, err := zap.ParseAtomicLevel(level)
-	if err != nil {
-		return err
-	}
-	// создаём новую конфигурацию логера
-	config := zap.NewProductionConfig()
-	// устанавливаем уровень
-	config.Level = lvl
-	config.OutputPaths = []string{"stdout"}
-	// создаём логер на основе конфигурации
-	zl, err := config.Build()
-	if err != nil {
-		return err
-	}
-	// устанавливаем синглтон
-	Log = zl
-
-	InitializeSugar()
 
 	return nil
 }
@@ -86,26 +61,6 @@ func (r *loggingResponseWriter) String() {
 	for k, v := range r.ResponseWriter.Header() {
 		buf.WriteString(fmt.Sprintf("%s: %v", k, v))
 	}
-
-	// buf.WriteString(fmt.Sprintf("Status Code: %d", r.statusCode))
-
-	// buf.WriteString("Body")
-	// buf.WriteString(r.body.String())
-}
-
-// Сведения о запросах должны содержать URI, метод запроса и время, затраченное на его выполнение.
-// Сведения об ответах должны содержать код статуса и размер содержимого ответа.
-
-// RequestLogger — middleware-логер для входящих HTTP-запросов.
-func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("LOG")
-		Log.Debug("got incoming HTTP request",
-			zap.String("method", r.Method),
-			zap.String("path", r.URL.Path),
-		)
-		h(w, r)
-	}
 }
 
 func LoggingMiddleware(h http.HandlerFunc) http.HandlerFunc {
@@ -123,14 +78,6 @@ func LoggingMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		h.ServeHTTP(&lw, r) // внедряем реализацию http.ResponseWriter
 
 		duration := time.Since(start)
-
-		// fmt.Println("LOG:", r.RequestURI, r.Method, duration, responseData.status, responseData.size)
-
-		/* Log.Info("got incoming HTTP request",
-			zap.String("method", r.Method),
-			zap.String("path", r.URL.Path),
-			zap.String("duration", string(duration)),
-		) */
 
 		sugar.Infoln(
 			responseData.status, // получаем перехваченный код статуса ответа
