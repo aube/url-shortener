@@ -7,6 +7,7 @@ import (
 
 	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/aube/url-shortener/internal/app/store"
+	"github.com/aube/url-shortener/internal/logger"
 )
 
 func HandlerAPI(baseURL string) http.HandlerFunc {
@@ -40,6 +41,6 @@ func HandlerAPI(baseURL string) http.HandlerFunc {
 
 		fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 
-		fmt.Println("URL:", shortURL, http.StatusCreated)
+		logger.Println("URL:", shortURL, http.StatusCreated)
 	}
 }

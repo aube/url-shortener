@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/aube/url-shortener/internal/app/store"
+	"github.com/aube/url-shortener/internal/logger"
 )
 
 func HandlerAPIUserUrls(baseURL string) http.HandlerFunc {
@@ -17,6 +18,6 @@ func HandlerAPIUserUrls(baseURL string) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Println("json:", json)
+		logger.Println("json:", json)
 	}
 }

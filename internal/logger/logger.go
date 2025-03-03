@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"fmt"
+
 	"go.uber.org/zap"
 )
 
@@ -12,7 +14,7 @@ func Initialize() error {
 	if err != nil {
 		panic(err)
 	}
-	defer logger.Sync()
+	// defer logger.Sync()
 
 	// делаем регистратор SugaredLogger
 	sugar = *logger.Sugar()
@@ -22,4 +24,8 @@ func Initialize() error {
 
 func Infoln(args ...interface{}) {
 	sugar.Infoln(args...)
+}
+
+func Println(args ...any) {
+	fmt.Println(args...)
 }

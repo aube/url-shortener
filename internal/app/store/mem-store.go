@@ -3,6 +3,8 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/aube/url-shortener/internal/logger"
 )
 
 // ???
@@ -29,7 +31,7 @@ func NewMemoryStore() *MemoryStore {
 
 func (s *MemoryStore) Get(key string) (value string, ok bool) {
 	value, ok = memData.s[key]
-	fmt.Println("Get key:", key, value)
+	logger.Infoln("Get key:", key, value)
 	return value, ok
 }
 
@@ -38,7 +40,7 @@ func (s *MemoryStore) Set(key string, value string) error {
 		return fmt.Errorf("invalid input")
 	}
 
-	fmt.Println("Set key:", key, value)
+	logger.Infoln("Set key:", key, value)
 	memData.s[key] = value
 
 	WriteToFile(key, value)
@@ -60,7 +62,7 @@ func (s *MemoryStore) JSON(baseURL string) []byte {
 	jsonBytes, err := json.Marshal(jsonData)
 
 	if err != nil {
-		fmt.Println(err)
+		logger.Infoln(err)
 	}
 
 	return jsonBytes

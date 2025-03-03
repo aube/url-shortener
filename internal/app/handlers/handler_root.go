@@ -8,6 +8,7 @@ import (
 
 	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/aube/url-shortener/internal/app/store"
+	"github.com/aube/url-shortener/internal/logger"
 )
 
 func HandlerRoot(baseURL string) http.HandlerFunc {
@@ -36,7 +37,7 @@ func HandlerRoot(baseURL string) http.HandlerFunc {
 
 		responseContentJSON := contentTypeJSON || acceptHeaderJSON
 
-		fmt.Println(
+		logger.Println(
 			"Request contentType:", contentType,
 			"Response contentType:", responseContentType,
 		)
@@ -61,7 +62,7 @@ func HandlerRoot(baseURL string) http.HandlerFunc {
 			fmt.Fprintf(w, "%s", shortURL)
 		}
 
-		fmt.Println("URL:", shortURL, http.StatusCreated)
+		logger.Println("URL:", shortURL, http.StatusCreated)
 
 	}
 }

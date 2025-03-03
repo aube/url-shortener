@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
+
+	"github.com/aube/url-shortener/internal/logger"
 )
 
 type URLJson struct {
@@ -14,7 +15,7 @@ func readURLFromJSON(body []byte) []byte {
 
 	err := json.Unmarshal(body, &jsonBody)
 	if err != nil {
-		fmt.Println("Error unmarshaling JSON:", err)
+		logger.Println("Error unmarshaling JSON:", err)
 		return nil
 	}
 	return []byte(jsonBody.URL)

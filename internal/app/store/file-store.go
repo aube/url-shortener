@@ -3,9 +3,10 @@ package store
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
+
+	"github.com/aube/url-shortener/internal/logger"
 )
 
 var storagePathFile string
@@ -18,7 +19,7 @@ func getDirFromPath(path string) (dir string) {
 func createDir(storagePath string) {
 	d := getDirFromPath(storagePath)
 
-	fmt.Println("create dir:", d)
+	logger.Println("create dir:", d)
 
 	if err := os.MkdirAll(d, os.ModePerm); err != nil {
 		panic(err)
@@ -33,10 +34,10 @@ func createFile(storagePath string) {
 
 	data := []byte("")
 	f, err := os.Create(storagePath)
-	fmt.Println("create file:", storagePath)
+	logger.Println("create file:", storagePath)
 
 	if err != nil {
-		fmt.Println("Unable to create file:", err)
+		logger.Println("Unable to create file:", err)
 		panic(err)
 	}
 	defer f.Close()
@@ -59,7 +60,7 @@ func lineToJSON(line string) itemURL {
 func putFileIntoMem(storagePath string) {
 	file, err := os.Open(storagePath)
 	if err != nil {
-		fmt.Println(err)
+		logger.Println(err)
 	}
 	defer file.Close()
 
@@ -68,13 +69,12 @@ func putFileIntoMem(storagePath string) {
 		line := scanner.Text()
 		if line != "" {
 			json := lineToJSON(line)
-			fmt.Println(line)
 			SetValue(json.Hash, json.URL)
 		}
 	}
 
 	if err = scanner.Err(); err != nil {
-		fmt.Println(err)
+		logger.Println(err)
 	}
 }
 
@@ -101,6 +101,6 @@ func WriteToFile(key string, value string) error {
 		return err
 	}
 
-	fmt.Println("WriteToFile:", json)
+	logger.Println("WriteToFile:", json)
 	return nil
 }

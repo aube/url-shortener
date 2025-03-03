@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/aube/url-shortener/cmd/shortener/config"
@@ -20,11 +19,6 @@ func init() {
 func main() {
 	config := config.NewConfig()
 	r := chi.NewRouter()
-
-	// r.Post("/*", middlewares.LoggingMiddleware(middlewares.GzipMiddleware(handlers.HandlerRoot(config.BaseURL))))
-	// r.Post("/api/*", middlewares.LoggingMiddleware(middlewares.GzipMiddleware(handlers.HandlerAPI(config.BaseURL))))
-	// r.Get("/api/user/urls", middlewares.LoggingMiddleware(handlers.HandlerAPIUserUrls(config.BaseURL)))
-	// r.Get("/{id}", middlewares.LoggingMiddleware(middlewares.GzipMiddleware(handlers.HandlerID())))
 
 	r.Group(func(r chi.Router) {
 		r.Use(
@@ -48,9 +42,13 @@ func main() {
 		return
 	}
 
-	err := http.ListenAndServe(config.ServerHost+":"+config.ServerPort, r)
+	address := config.ServerHost + ":" + config.ServerPort
+	logger.Infoln("Server starting at", address)
+
+	err := http.ListenAndServe(address, r)
 
 	if err != nil {
-		fmt.Println("Error starting server:", err)
+		logger.Infoln("Error starting server:", err)
 	}
+
 }

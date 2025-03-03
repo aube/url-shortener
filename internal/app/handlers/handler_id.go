@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/aube/url-shortener/internal/app/store"
+	"github.com/aube/url-shortener/internal/logger"
 )
 
 func HandlerID() http.HandlerFunc {
@@ -18,7 +18,7 @@ func HandlerID() http.HandlerFunc {
 			return
 		}
 
-		fmt.Println("Requested ID:", id)
+		logger.Println("Requested ID:", id)
 
 		url, ok := MemoryStore.Get(id)
 		if url == "" || !ok {
@@ -26,7 +26,7 @@ func HandlerID() http.HandlerFunc {
 			return
 		}
 
-		fmt.Println("URL:", url)
+		logger.Println("URL:", url)
 
 		w.Header().Set("Location", url)
 		w.WriteHeader(http.StatusTemporaryRedirect)
