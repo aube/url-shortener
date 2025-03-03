@@ -1,4 +1,4 @@
-package gzip
+package middlewares
 
 import (
 	"compress/gzip"
@@ -73,8 +73,15 @@ func (c *compressReader) Close() error {
 	return c.zr.Close()
 }
 
-func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+/*
+	func UserContextBody(next http.Handler) http.Handler {
+	   return http.HandlerFunc(
+
+	func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+*/
+func GzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
 		// который будем передавать следующей функции
 		ow := w
@@ -109,7 +116,6 @@ func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			defer cr.Close()
 		}
 
-		// передаём управление хендлеру
-		h.ServeHTTP(ow, r)
-	}
+		next.ServeHTTP(ow, r)
+	})
 }
