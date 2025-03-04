@@ -18,6 +18,7 @@ func init() {
 
 func main() {
 	config := config.NewConfig()
+	MemoryStore := store.NewMemoryStore()
 	r := chi.NewRouter()
 
 	r.Group(func(r chi.Router) {
@@ -25,9 +26,9 @@ func main() {
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)
-		r.Get("/{id}", handlers.HandlerID())
-		r.Post("/*", handlers.HandlerRoot(config.BaseURL))
-		r.Post("/api/*", handlers.HandlerAPI(config.BaseURL))
+		r.Get("/{id}", handlers.HandlerID(MemoryStore))
+		r.Post("/*", handlers.HandlerRoot(MemoryStore, config.BaseURL))
+		r.Post("/api/*", handlers.HandlerAPI(MemoryStore, config.BaseURL))
 	})
 
 	r.Group(func(r chi.Router) {

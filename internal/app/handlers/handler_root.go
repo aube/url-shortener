@@ -11,7 +11,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerRoot(baseURL string) http.HandlerFunc {
+func HandlerRoot(MemoryStore store.Storage, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		MemoryStore := store.NewMemoryStore()
 

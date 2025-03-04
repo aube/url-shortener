@@ -7,10 +7,8 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerID() http.HandlerFunc {
+func HandlerID(MemoryStore store.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		MemoryStore := store.NewMemoryStore()
-
 		id := r.PathValue("id")
 
 		if id == "" {

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aube/url-shortener/internal/app/hasher"
+	"github.com/aube/url-shortener/internal/app/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,6 +17,7 @@ import (
 func TestHandlerRoot(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"
+	MemoryStore := store.NewMemoryStore()
 
 	hash := hasher.CalcHash([]byte(fakeAddress))
 	type want struct {
@@ -51,7 +53,7 @@ func TestHandlerRoot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
 			w := httptest.NewRecorder()
-			h := HandlerRoot(baseURL)
+			h := HandlerRoot(MemoryStore, baseURL)
 			h(w, r)
 
 			result := w.Result()

@@ -7,12 +7,10 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-// ???
-/* type Storage interface {
+type Storage interface {
 	Get(key string) (value string, ok bool)
 	Set(key string, value string) error
 }
-*/
 
 type MemoryStore struct {
 	s map[string]string
