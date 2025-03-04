@@ -67,11 +67,11 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		duration := time.Since(start)
 
 		logger.Infoln(
-			responseData.status, // получаем перехваченный код статуса ответа
-			r.Method,
-			r.RequestURI,
-			duration,
-			responseData.size, // получаем перехваченный размер ответа
+			"status", responseData.status, // получаем перехваченный код статуса ответа
+			"method", r.Method,
+			"URI", r.RequestURI,
+			"duration", duration,
+			"size", responseData.size, // получаем перехваченный размер ответа
 			"ce", r.Header.Get("Content-Encoding"),
 			"ct", r.Header.Get("Content-Type"),
 		)

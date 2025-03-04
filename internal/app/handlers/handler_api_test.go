@@ -9,15 +9,24 @@ import (
 	"testing"
 
 	"github.com/aube/url-shortener/internal/app/hasher"
-	"github.com/aube/url-shortener/internal/app/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+type MockMemoryStore struct{}
+
+func (m *MockMemoryStore) Get(s string) (string, bool) {
+	return s, true
+}
+
+func (m *MockMemoryStore) Set(k string, v string) error {
+	return nil
+}
+
 func TestHandlerAPI(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"
-	MemoryStore := store.NewMemoryStore()
+	MemoryStore := &MockMemoryStore{}
 
 	hash := hasher.CalcHash([]byte(fakeAddress))
 	type want struct {

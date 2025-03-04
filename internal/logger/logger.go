@@ -2,28 +2,32 @@ package logger
 
 import (
 	"fmt"
-
-	"go.uber.org/zap"
+	"log/slog"
+	"os"
 )
 
-var sugar zap.SugaredLogger
+// var sugar zap.SugaredLogger
 
 func Initialize() error {
 	// преобразуем текстовый уровень логирования в zap.AtomicLevel
-	logger, err := zap.NewDevelopment()
+	/* l, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
-	}
-	// defer logger.Sync()
+	} */
 
 	// делаем регистратор SugaredLogger
-	sugar = *logger.Sugar()
+	// sugar = *l.Sugar()
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	slog.SetDefault(logger)
 
 	return nil
 }
 
 func Infoln(args ...interface{}) {
-	sugar.Infoln(args...)
+	// sugar.Infoln(args...)
+	slog.Info("slog.Info", args...)
 }
 
 func Println(args ...any) {
