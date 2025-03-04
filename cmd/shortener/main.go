@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/aube/url-shortener/cmd/shortener/config"
+	"github.com/aube/url-shortener/internal/app/config"
 	"github.com/aube/url-shortener/internal/app/handlers"
 	"github.com/aube/url-shortener/internal/app/middlewares"
 	"github.com/aube/url-shortener/internal/app/store"
