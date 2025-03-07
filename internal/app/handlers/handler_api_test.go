@@ -13,9 +13,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHandlerRoot(t *testing.T) {
+type MockMemoryStore struct{}
+
+func (m *MockMemoryStore) Get(s string) (string, bool) {
+	return s, true
+}
+
+func (m *MockMemoryStore) Set(k string, v string) error {
+	return nil
+}
+
+func (m *MockMemoryStore) List() map[string]string {
+	return nil
+}
+
+func TestHandlerAPI(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"
+	MemoryStore := &MockMemoryStore{}
 
 	hash := hasher.CalcHash([]byte(fakeAddress))
 	type want struct {
@@ -51,9 +66,7 @@ func TestHandlerRoot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
 			w := httptest.NewRecorder()
-			h := func(w http.ResponseWriter, r *http.Request) {
-				HandlerRoot(w, r, baseURL)
-			}
+			h := HandlerRoot(MemoryStore, baseURL)
 			h(w, r)
 
 			result := w.Result()

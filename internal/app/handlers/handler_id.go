@@ -1,32 +1,32 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/aube/url-shortener/internal/app/store"
+	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerID(w http.ResponseWriter, r *http.Request) {
-	MemoryStore := store.NewMemoryStore()
+func HandlerID(MemoryStore Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 
-	id := r.PathValue("id")
+		if id == "" {
+			http.Error(w, "ID must be specified", http.StatusBadRequest)
+			return
+		}
 
-	if id == "" {
-		http.Error(w, "ID must be specified", http.StatusBadRequest)
-		return
+		logger.Println("Requested ID:", id)
+
+		url, ok := MemoryStore.Get(id)
+		if url == "" || !ok {
+			http.Error(w, "URL not found", http.StatusBadRequest)
+			return
+		}
+
+		logger.Println("URL:", url)
+
+		w.Header().Set("Location", url)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+
 	}
-
-	url, ok := MemoryStore.Get(id)
-	if url == "" || !ok {
-		http.Error(w, "URL not found", http.StatusBadRequest)
-		return
-	}
-
-	fmt.Println("Requested ID:", id)
-	fmt.Println("URL:", url)
-
-	w.Header().Set("Location", url)
-	w.WriteHeader(http.StatusTemporaryRedirect)
-
 }
