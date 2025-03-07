@@ -18,7 +18,7 @@ type EnvConfig struct {
 	FileStorageDir  string `env:"FILE_STORAGE_DIR"`
 }
 
-var Config EnvConfig
+var config EnvConfig
 var initialized bool = false
 
 func getEnvVariables() EnvConfig {
@@ -33,7 +33,7 @@ func getEnvVariables() EnvConfig {
 func NewConfig() EnvConfig {
 
 	if initialized {
-		return Config
+		return config
 	}
 
 	var flagBaseURL string
@@ -47,32 +47,32 @@ func NewConfig() EnvConfig {
 	flag.StringVar(&flagStoragePath, "f", "./_hashes/hashes_list.json", "hashes file")
 	flag.Parse()
 
-	Config = getEnvVariables()
+	config = getEnvVariables()
 
-	if Config.BaseURL == "" {
-		Config.BaseURL = flagBaseURL
+	if config.BaseURL == "" {
+		config.BaseURL = flagBaseURL
 	}
 
-	if Config.FileStoragePath == "" {
-		Config.FileStoragePath = flagStoragePath
+	if config.FileStoragePath == "" {
+		config.FileStoragePath = flagStoragePath
 	}
 
-	if Config.FileStorageDir == "" {
-		Config.FileStorageDir = flagStorageDir
+	if config.FileStorageDir == "" {
+		config.FileStorageDir = flagStorageDir
 	}
 
-	if Config.ServerAddress == "" {
-		Config.ServerAddress = flagServerAddress
+	if config.ServerAddress == "" {
+		config.ServerAddress = flagServerAddress
 	}
 
-	Config.ServerHost = strings.Split(Config.ServerAddress, ":")[0]
-	Config.ServerPort = strings.Split(Config.ServerAddress, ":")[1]
+	config.ServerHost = strings.Split(config.ServerAddress, ":")[0]
+	config.ServerPort = strings.Split(config.ServerAddress, ":")[1]
 
-	logger.Println("serverAddress: " + Config.ServerAddress)
-	logger.Println("serverHost: " + Config.ServerHost)
-	logger.Println("serverPort: " + Config.ServerPort)
+	logger.Println("serverAddress: " + config.ServerAddress)
+	logger.Println("serverHost: " + config.ServerHost)
+	logger.Println("serverPort: " + config.ServerPort)
 
 	initialized = true
 
-	return Config
+	return config
 }

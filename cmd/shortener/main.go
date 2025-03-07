@@ -11,14 +11,16 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func init() {
-	config := config.NewConfig()
-	store.NewFileStore(config.FileStoragePath)
-}
-
 func main() {
 	config := config.NewConfig()
-	MemoryStore := store.NewMemoryStore()
+
+	var storage store.Storage
+	if config.FileStoragePath != "" {
+		storage = store.NewFileStore(config.FileStoragePath)
+	} else {
+		storage = store.NewMemStore()
+	}
+
 	r := chi.NewRouter()
 
 	r.Group(func(r chi.Router) {
@@ -26,14 +28,14 @@ func main() {
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)
-		r.Get("/{id}", handlers.HandlerID(MemoryStore))
-		r.Post("/*", handlers.HandlerRoot(MemoryStore, config.BaseURL))
-		r.Post("/api/*", handlers.HandlerAPI(MemoryStore, config.BaseURL))
+		r.Get("/{id}", handlers.HandlerID(storage))
+		r.Post("/*", handlers.HandlerRoot(storage, config.BaseURL))
+		r.Post("/api/*", handlers.HandlerAPI(storage, config.BaseURL))
 	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(middlewares.LoggingMiddleware)
-		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(config.BaseURL))
+		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(storage, config.BaseURL))
 	})
 
 	// empty handler for prevent error on automatic browser favicon request

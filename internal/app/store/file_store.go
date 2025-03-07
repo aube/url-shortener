@@ -69,7 +69,7 @@ func putFileIntoMem(storagePath string) {
 		line := scanner.Text()
 		if line != "" {
 			json := lineToJSON(line)
-			SetValue(json.Hash, json.URL)
+			memData.s[json.Hash] = json.URL
 		}
 	}
 
@@ -78,11 +78,13 @@ func putFileIntoMem(storagePath string) {
 	}
 }
 
-func NewFileStore(storagePath string) {
+func NewFileStore(storagePath string) *MemoryStore {
 	createDir(storagePath)
 	createFile(storagePath)
 	putFileIntoMem(storagePath)
 	storagePathFile = storagePath
+
+	return memData
 }
 
 func WriteToFile(key string, value string) error {

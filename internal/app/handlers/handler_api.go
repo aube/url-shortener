@@ -6,11 +6,10 @@ import (
 	"net/http"
 
 	"github.com/aube/url-shortener/internal/app/hasher"
-	"github.com/aube/url-shortener/internal/app/store"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerAPI(MemoryStore store.Storage, baseURL string) http.HandlerFunc {
+func HandlerAPI(MemoryStore Storage, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Body == nil || r.ContentLength == 0 {
@@ -31,7 +30,6 @@ func HandlerAPI(MemoryStore store.Storage, baseURL string) http.HandlerFunc {
 		hash := hasher.CalcHash(originalURL)
 
 		MemoryStore.Set(hash, string(originalURL))
-		MemoryStore.Get(hash)
 
 		shortURL := baseURL + "/" + hash
 

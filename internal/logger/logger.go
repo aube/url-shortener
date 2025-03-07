@@ -11,9 +11,9 @@ import (
 func Initialize() error {
 	// преобразуем текстовый уровень логирования в zap.AtomicLevel
 	/* l, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	} */
+	   if err != nil {
+	       panic(err)
+	   } */
 
 	// делаем регистратор SugaredLogger
 	// sugar = *l.Sugar()

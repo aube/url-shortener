@@ -23,6 +23,10 @@ func (m *MockMemoryStore) Set(k string, v string) error {
 	return nil
 }
 
+func (m *MockMemoryStore) List() map[string]string {
+	return nil
+}
+
 func TestHandlerAPI(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"

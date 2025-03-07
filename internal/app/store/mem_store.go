@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/aube/url-shortener/internal/logger"
@@ -10,6 +9,7 @@ import (
 type Storage interface {
 	Get(key string) (value string, ok bool)
 	Set(key string, value string) error
+	List() map[string]string
 }
 
 type MemoryStore struct {
@@ -23,7 +23,7 @@ func init() {
 	memData = &MemoryStore{make(map[string]string)}
 }
 
-func NewMemoryStore() *MemoryStore {
+func NewMemStore() *MemoryStore {
 	return memData
 }
 
@@ -46,26 +46,6 @@ func (s *MemoryStore) Set(key string, value string) error {
 	return nil
 }
 
-type JSONItem struct {
-	Hash string `json:"short_url"`
-	URL  string `json:"original_url"`
-}
-
-func (s *MemoryStore) JSON(baseURL string) []byte {
-	var jsonData []JSONItem
-	for k, v := range memData.s {
-		item := JSONItem{Hash: baseURL + "/" + k, URL: v}
-		jsonData = append(jsonData, item)
-	}
-	jsonBytes, err := json.Marshal(jsonData)
-
-	if err != nil {
-		logger.Infoln(err)
-	}
-
-	return jsonBytes
-}
-
-func SetValue(key string, value string) {
-	memData.s[key] = value
+func (s *MemoryStore) List() map[string]string {
+	return memData.s
 }

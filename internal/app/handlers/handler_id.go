@@ -3,11 +3,10 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/aube/url-shortener/internal/app/store"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerID(MemoryStore store.Storage) http.HandlerFunc {
+func HandlerID(MemoryStore Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 

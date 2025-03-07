@@ -51,7 +51,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// func LoggingMiddleware(h http.HandlerFunc) http.HandlerFunc {
-		// 	return func(w http.ResponseWriter, r *http.Request) {
+		//     return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		responseData := &responseData{

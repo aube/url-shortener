@@ -7,14 +7,11 @@ import (
 	"strings"
 
 	"github.com/aube/url-shortener/internal/app/hasher"
-	"github.com/aube/url-shortener/internal/app/store"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerRoot(MemoryStore store.Storage, baseURL string) http.HandlerFunc {
+func HandlerRoot(MemoryStore Storage, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		MemoryStore := store.NewMemoryStore()
-
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)
 			return
@@ -49,7 +46,6 @@ func HandlerRoot(MemoryStore store.Storage, baseURL string) http.HandlerFunc {
 
 		hash := hasher.CalcHash(originalURL)
 		MemoryStore.Set(hash, string(originalURL))
-		MemoryStore.Get(hash)
 
 		shortURL := baseURL + "/" + hash
 
@@ -63,6 +59,5 @@ func HandlerRoot(MemoryStore store.Storage, baseURL string) http.HandlerFunc {
 		}
 
 		logger.Println("URL:", shortURL, http.StatusCreated)
-
 	}
 }

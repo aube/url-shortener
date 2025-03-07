@@ -79,7 +79,7 @@ func (c *compressReader) Close() error {
 	   return http.HandlerFunc(
 
 	func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+	    return func(w http.ResponseWriter, r *http.Request) {
 */
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
