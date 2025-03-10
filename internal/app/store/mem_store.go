@@ -16,16 +16,7 @@ type MemoryStore struct {
 	s map[string]string
 }
 
-var memData *MemoryStore
-
-func init() {
-	// initialize the singleton object. Here we're using a simple map as our storage
-	memData = &MemoryStore{make(map[string]string)}
-}
-
-func NewMemStore() *MemoryStore {
-	return memData
-}
+var memData = &MemoryStore{s: make(map[string]string)}
 
 func (s *MemoryStore) Get(key string) (value string, ok bool) {
 	value, ok = memData.s[key]
@@ -41,11 +32,13 @@ func (s *MemoryStore) Set(key string, value string) error {
 	logger.Infoln("Set key:", key, value)
 	memData.s[key] = value
 
-	WriteToFile(key, value)
-
 	return nil
 }
 
 func (s *MemoryStore) List() map[string]string {
 	return memData.s
+}
+
+func NewMemStore() Storage {
+	return &MemoryStore{}
 }

@@ -16,6 +16,7 @@ type EnvConfig struct {
 	ServerPort      string
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	FileStorageDir  string `env:"FILE_STORAGE_DIR"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 var config EnvConfig
@@ -40,10 +41,12 @@ func NewConfig() EnvConfig {
 	var flagServerAddress string
 	var flagStoragePath string
 	var flagStorageDir string
+	var flagDatabaseDSN string
 
 	flag.StringVar(&flagBaseURL, "b", "http://localhost:8080", "address and port for generated link")
 	flag.StringVar(&flagServerAddress, "a", "localhost:8080", "address and port to run server")
-	flag.StringVar(&flagStorageDir, "d", "./_hashes", "hashes dir")
+	flag.StringVar(&flagDatabaseDSN, "d", "", "Database connection string")
+	flag.StringVar(&flagStorageDir, "dir", "./_hashes", "hashes dir")
 	flag.StringVar(&flagStoragePath, "f", "./_hashes/hashes_list.json", "hashes file")
 	flag.Parse()
 
@@ -63,6 +66,10 @@ func NewConfig() EnvConfig {
 
 	if config.ServerAddress == "" {
 		config.ServerAddress = flagServerAddress
+	}
+
+	if config.DatabaseDSN == "" {
+		config.DatabaseDSN = flagDatabaseDSN
 	}
 
 	config.ServerHost = strings.Split(config.ServerAddress, ":")[0]

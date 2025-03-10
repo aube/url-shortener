@@ -5,3 +5,8 @@ type Storage interface {
 	Set(key string, value string) error
 	List() map[string]string
 }
+
+type StorageDB interface {
+	Storage
+	Ping() error
+}

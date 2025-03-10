@@ -15,7 +15,11 @@ func main() {
 	config := config.NewConfig()
 
 	var storage store.Storage
-	if config.FileStoragePath != "" {
+	var storageDB store.StorageDB
+
+	if config.DatabaseDSN != "" {
+		storageDB = store.NewDBStore(config.DatabaseDSN)
+	} else if config.FileStoragePath != "" {
 		storage = store.NewFileStore(config.FileStoragePath)
 	} else {
 		storage = store.NewMemStore()
@@ -36,6 +40,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(middlewares.LoggingMiddleware)
 		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(storage, config.BaseURL))
+		r.Get("/ping", handlers.HandlerPing(storageDB))
 	})
 
 	// empty handler for prevent error on automatic browser favicon request

@@ -3,6 +3,7 @@ package store
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
@@ -10,6 +11,35 @@ import (
 )
 
 var storagePathFile string
+
+type FileStore struct {
+	s map[string]string
+}
+
+var fileData = &FileStore{s: make(map[string]string)}
+
+func (s *FileStore) Get(key string) (value string, ok bool) {
+	value, ok = fileData.s[key]
+	logger.Infoln("Get key:", key, value)
+	return value, ok
+}
+
+func (s *FileStore) Set(key string, value string) error {
+	if key == "" || value == "" {
+		return fmt.Errorf("invalid input")
+	}
+
+	logger.Infoln("Set key:", key, value)
+	fileData.s[key] = value
+
+	WriteToFile(key, value)
+
+	return nil
+}
+
+func (s *FileStore) List() map[string]string {
+	return fileData.s
+}
 
 func getDirFromPath(path string) (dir string) {
 	parts := strings.Split(path, `/`)
@@ -57,7 +87,7 @@ func lineToJSON(line string) itemURL {
 	return req
 }
 
-func putFileIntoMem(storagePath string) {
+func loadFileIntoMem(storagePath string) {
 	file, err := os.Open(storagePath)
 	if err != nil {
 		logger.Println(err)
@@ -69,7 +99,7 @@ func putFileIntoMem(storagePath string) {
 		line := scanner.Text()
 		if line != "" {
 			json := lineToJSON(line)
-			memData.s[json.Hash] = json.URL
+			fileData.s[json.Hash] = json.URL
 		}
 	}
 
@@ -78,13 +108,13 @@ func putFileIntoMem(storagePath string) {
 	}
 }
 
-func NewFileStore(storagePath string) *MemoryStore {
+func NewFileStore(storagePath string) Storage {
 	createDir(storagePath)
 	createFile(storagePath)
-	putFileIntoMem(storagePath)
+	loadFileIntoMem(storagePath)
 	storagePathFile = storagePath
 
-	return memData
+	return &FileStore{}
 }
 
 func WriteToFile(key string, value string) error {
