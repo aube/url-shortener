@@ -10,6 +10,7 @@ type Storage interface {
 	Get(key string) (value string, ok bool)
 	Set(key string, value string) error
 	List() map[string]string
+	Ping() error
 }
 
 type MemoryStore struct {
@@ -32,6 +33,10 @@ func (s *MemoryStore) Set(key string, value string) error {
 	logger.Infoln("Set key:", key, value)
 	memData.s[key] = value
 
+	return nil
+}
+
+func (s *MemoryStore) Ping() error {
 	return nil
 }
 

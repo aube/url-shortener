@@ -41,6 +41,10 @@ func (s *FileStore) List() map[string]string {
 	return fileData.s
 }
 
+func (s *FileStore) Ping() error {
+	return nil
+}
+
 func getDirFromPath(path string) (dir string) {
 	parts := strings.Split(path, `/`)
 	return strings.Join(parts[:len(parts)-1], "/")

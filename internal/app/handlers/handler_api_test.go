@@ -27,6 +27,10 @@ func (m *MockMemoryStore) List() map[string]string {
 	return nil
 }
 
+func (m *MockMemoryStore) Ping() error {
+	return nil
+}
+
 func TestHandlerAPI(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"

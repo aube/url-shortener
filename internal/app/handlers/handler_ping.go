@@ -7,7 +7,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerPing(DBStore StorageDB) http.HandlerFunc {
+func HandlerPing(DBStore Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		err := DBStore.Ping()

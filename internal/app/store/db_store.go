@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -12,30 +11,36 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-type StorageDB interface {
-	Storage
-	Ping() error
-}
-
 type DBStore struct{}
 
 var db *sql.DB
 
 func (s *DBStore) Get(key string) (value string, ok bool) {
-	// value, ok = dbData.s[key]
-	// logger.Infoln("Get key:", key, value)
-	return value, ok
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	row := db.QueryRowContext(ctx, "SELECT original_url FROM urls WHERE short_url=$1", key)
+	var original_url string
+	err := row.Scan(&original_url)
+
+	if err != nil {
+		logger.Println("SQL error", err)
+	}
+
+	return original_url, err == nil
 }
 
 func (s *DBStore) Set(key string, value string) error {
-	// if key == "" || value == "" {
-	// 	return fmt.Errorf("invalid input")
-	// }
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
-	// logger.Infoln("Set key:", key, value)
-	// dbData.s[key] = value
+	_, err := db.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES($1, $2)", key, value)
 
-	return nil
+	if err != nil {
+		logger.Println("SQL error", err)
+	}
+
+	return err
 }
 
 func (s *DBStore) List() map[string]string {
@@ -55,12 +60,9 @@ func (s *DBStore) Ping() error {
 	return nil
 }
 
-func NewDBStore(dsn string) StorageDB {
-	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
-		dsn, `videouser`, `videopass`, `videodb`)
-
+func NewDBStore(dsn string) Storage {
 	var err error
-	db, err = sql.Open("pgx", ps)
+	db, err = sql.Open("pgx", dsn)
 
 	if err != nil {
 		panic(err)
@@ -76,12 +78,10 @@ func NewDBStore(dsn string) StorageDB {
 
 func createDB(db *sql.DB) {
 	ctx := context.Background()
-	_, err := db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS videos (
-        "video_id" TEXT,
-        "title" TEXT,
-        "publish_time" TEXT,
-        "tags" TEXT,
-        "views" INTEGER
+	_, err := db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS urls (
+        id serial PRIMARY KEY,
+        short_url CHAR(10) UNIQUE,
+        original_url TEXT
       )`)
 	if err != nil {
 		logger.Println("createDB error:", err)
