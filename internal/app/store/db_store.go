@@ -19,15 +19,15 @@ func (s *DBStore) Get(key string) (value string, ok bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	row := db.QueryRowContext(ctx, "SELECT original_url FROM urls WHERE short_url=$1", key)
-	var original_url string
-	err := row.Scan(&original_url)
+	row := db.QueryRowContext(ctx, "SELECT original_url as originalURL FROM urls WHERE short_url=$1", key)
+	var originalURL string
+	err := row.Scan(&originalURL)
 
 	if err != nil {
 		logger.Println("SQL error", err)
 	}
 
-	return original_url, err == nil
+	return originalURL, err == nil
 }
 
 func (s *DBStore) Set(key string, value string) error {
