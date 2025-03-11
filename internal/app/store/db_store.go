@@ -3,12 +3,15 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"reflect"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/aube/url-shortener/internal/logger"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type DBStore struct{}
@@ -37,6 +40,11 @@ func (s *DBStore) Set(key string, value string) error {
 	_, err := db.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES($1, $2)", key, value)
 
 	if err != nil {
+		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			err = ErrConflict
+		}
 		logger.Println("SQL error", err)
 	}
 

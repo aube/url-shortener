@@ -43,21 +43,24 @@ func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
 			originalURL = readURLFromJSON(body)
 			responseContentType = "application/json"
 		}
+		w.Header().Set("Content-Type", responseContentType)
 
 		hash := hasher.CalcHash(originalURL)
-		store.Set(hash, string(originalURL))
+		httpStatus := http.StatusCreated
+
+		err = store.Set(hash, string(originalURL))
+		if err != nil {
+			httpStatus = http.StatusConflict
+		}
+		w.WriteHeader(httpStatus)
 
 		shortURL := baseURL + "/" + hash
-
-		w.Header().Set("Content-Type", responseContentType)
-		w.WriteHeader(http.StatusCreated)
-
 		if responseContentJSON {
 			fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 		} else {
 			fmt.Fprintf(w, "%s", shortURL)
 		}
 
-		logger.Println("URL:", shortURL, http.StatusCreated)
+		logger.Println("URL:", shortURL, httpStatus)
 	}
 }

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aube/url-shortener/internal/logger"
@@ -19,6 +20,9 @@ type MemoryStore struct {
 	s map[string]string
 }
 
+// ErrConflict указывает на конфликт данных в хранилище.
+var ErrConflict = errors.New("data conflict")
+
 var memData = &MemoryStore{s: make(map[string]string)}
 
 func (s *MemoryStore) Get(key string) (value string, ok bool) {
@@ -30,6 +34,10 @@ func (s *MemoryStore) Get(key string) (value string, ok bool) {
 func (s *MemoryStore) Set(key string, value string) error {
 	if key == "" || value == "" {
 		return fmt.Errorf("invalid input")
+	}
+
+	if _, ok := memData.s[key]; ok {
+		return ErrConflict
 	}
 
 	logger.Infoln("Set key:", key, value)

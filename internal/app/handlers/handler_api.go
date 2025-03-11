@@ -33,15 +33,18 @@ func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
 		originalURL := readURLFromJSON(body)
 		hash := hasher.CalcHash(originalURL)
 
-		store.Set(hash, string(originalURL))
+		w.Header().Set("Content-Type", "application/json")
+		httpStatus := http.StatusCreated
+
+		err = store.Set(hash, string(originalURL))
+		if err != nil {
+			httpStatus = http.StatusConflict
+		}
+		w.WriteHeader(httpStatus)
 
 		shortURL := baseURL + "/" + hash
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-
 		fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 
-		logger.Println("URL:", shortURL, http.StatusCreated)
+		logger.Println("URL:", shortURL, httpStatus)
 	}
 }

@@ -29,6 +29,10 @@ func (s *FileStore) Set(key string, value string) error {
 		return fmt.Errorf("invalid input")
 	}
 
+	if _, ok := fileData.s[key]; ok {
+		return ErrConflict
+	}
+
 	logger.Infoln("Set key:", key, value)
 	fileData.s[key] = value
 
