@@ -8,9 +8,11 @@ import (
 
 type Storage interface {
 	Get(key string) (value string, ok bool)
-	Set(key string, value string) error
 	List() map[string]string
 	Ping() error
+
+	Set(key string, value string) error
+	SetMultiple(map[string]string) error
 }
 
 type MemoryStore struct {
@@ -42,6 +44,14 @@ func (s *MemoryStore) Ping() error {
 
 func (s *MemoryStore) List() map[string]string {
 	return memData.s
+}
+
+func (s *MemoryStore) SetMultiple(items map[string]string) error {
+	for k, v := range items {
+		logger.Infoln("Set key:", k, v)
+		memData.s[k] = v
+	}
+	return nil
 }
 
 func NewMemStore() Storage {

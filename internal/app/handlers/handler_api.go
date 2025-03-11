@@ -13,7 +13,7 @@ type StorageSet interface {
 	Set(key string, value string) error
 }
 
-func HandlerAPI(MemoryStore StorageSet, baseURL string) http.HandlerFunc {
+func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Body == nil || r.ContentLength == 0 {
@@ -33,7 +33,7 @@ func HandlerAPI(MemoryStore StorageSet, baseURL string) http.HandlerFunc {
 		originalURL := readURLFromJSON(body)
 		hash := hasher.CalcHash(originalURL)
 
-		MemoryStore.Set(hash, string(originalURL))
+		store.Set(hash, string(originalURL))
 
 		shortURL := baseURL + "/" + hash
 

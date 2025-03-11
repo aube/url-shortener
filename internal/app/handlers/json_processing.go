@@ -20,23 +20,3 @@ func readURLFromJSON(body []byte) []byte {
 	}
 	return []byte(jsonBody.URL)
 }
-
-type JSONItem struct {
-	Hash string `json:"short_url"`
-	URL  string `json:"original_url"`
-}
-
-func urlsJSON(memData map[string]string, baseURL string) []byte {
-	var jsonData []JSONItem
-	for k, v := range memData {
-		item := JSONItem{Hash: baseURL + "/" + k, URL: v}
-		jsonData = append(jsonData, item)
-	}
-	jsonBytes, err := json.Marshal(jsonData)
-
-	if err != nil {
-		logger.Infoln(err)
-	}
-
-	return jsonBytes
-}

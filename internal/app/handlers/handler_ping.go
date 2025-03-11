@@ -11,10 +11,10 @@ type StoragePing interface {
 	Ping() error
 }
 
-func HandlerPing(DBStore StoragePing) http.HandlerFunc {
+func HandlerPing(store StoragePing) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		err := DBStore.Ping()
+		err := store.Ping()
 		if err != nil {
 			logger.Println(err)
 			http.Error(w, "URL not found", http.StatusBadRequest)

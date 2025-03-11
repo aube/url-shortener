@@ -60,6 +60,27 @@ func (s *DBStore) Ping() error {
 	return nil
 }
 
+func (s *DBStore) SetMultiple(items map[string]string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	for k, v := range items {
+		_, err := tx.ExecContext(ctx,
+			"INSERT INTO urls (short_url, original_url) VALUES ($1, $2) ON CONFLICT (short_url) DO NOTHING", k, v)
+
+		if err != nil {
+			// если ошибка, то откатываем
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func NewDBStore(dsn string) Storage {
 	var err error
 	db, err = sql.Open("pgx", dsn)
@@ -86,5 +107,4 @@ func createDB(db *sql.DB) {
 	if err != nil {
 		logger.Println("createDB error:", err)
 	}
-	// _, err = db.ExecContext(ctx, "CREATE INDEX video_id ON videos (video_id)")
 }

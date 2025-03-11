@@ -10,7 +10,7 @@ type StorageGet interface {
 	Get(key string) (value string, ok bool)
 }
 
-func HandlerID(MemoryStore StorageGet) http.HandlerFunc {
+func HandlerID(store StorageGet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 
@@ -21,7 +21,7 @@ func HandlerID(MemoryStore StorageGet) http.HandlerFunc {
 
 		logger.Println("Requested ID:", id)
 
-		url, ok := MemoryStore.Get(id)
+		url, ok := store.Get(id)
 		if url == "" || !ok {
 			http.Error(w, "URL not found", http.StatusBadRequest)
 			return

@@ -34,6 +34,7 @@ func main() {
 		r.Get("/{id}", handlers.HandlerID(storage))
 		r.Post("/*", handlers.HandlerRoot(storage, config.BaseURL))
 		r.Post("/api/*", handlers.HandlerAPI(storage, config.BaseURL))
+		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(storage, config.BaseURL))
 	})
 
 	r.Group(func(r chi.Router) {

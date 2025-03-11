@@ -45,6 +45,16 @@ func (s *FileStore) Ping() error {
 	return nil
 }
 
+func (s *FileStore) SetMultiple(items map[string]string) error {
+	for k, v := range items {
+		logger.Infoln("Set key:", k, v)
+		fileData.s[k] = v
+
+		WriteToFile(k, v)
+	}
+	return nil
+}
+
 func getDirFromPath(path string) (dir string) {
 	parts := strings.Split(path, `/`)
 	return strings.Join(parts[:len(parts)-1], "/")
