@@ -26,9 +26,8 @@ type JSONItem struct {
 	URL  string `json:"original_url"`
 }
 
-func urlsJSON(MemStore Storage, baseURL string) []byte {
+func urlsJSON(memData map[string]string, baseURL string) []byte {
 	var jsonData []JSONItem
-	memData := MemStore.List()
 	for k, v := range memData {
 		item := JSONItem{Hash: baseURL + "/" + k, URL: v}
 		jsonData = append(jsonData, item)

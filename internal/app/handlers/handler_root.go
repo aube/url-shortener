@@ -10,7 +10,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerRoot(MemoryStore Storage, baseURL string) http.HandlerFunc {
+func HandlerRoot(MemoryStore StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)

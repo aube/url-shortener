@@ -6,7 +6,11 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerID(MemoryStore Storage) http.HandlerFunc {
+type StorageGet interface {
+	Get(key string) (value string, ok bool)
+}
+
+func HandlerID(MemoryStore StorageGet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 

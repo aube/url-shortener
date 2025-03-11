@@ -9,7 +9,11 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerAPI(MemoryStore Storage, baseURL string) http.HandlerFunc {
+type StorageSet interface {
+	Set(key string, value string) error
+}
+
+func HandlerAPI(MemoryStore StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Body == nil || r.ContentLength == 0 {
