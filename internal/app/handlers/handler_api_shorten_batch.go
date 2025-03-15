@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,10 +12,10 @@ import (
 )
 
 type StorageSetMultiple interface {
-	SetMultiple(map[string]string) error
+	SetMultiple(context.Context, map[string]string) error
 }
 
-func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerFunc {
+func HandlerShortenBatch(ctx context.Context, store StorageSetMultiple, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)
@@ -45,7 +46,7 @@ func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerF
 		fmt.Println("items", items)
 		fmt.Println("outputBatch", outputBatch)
 
-		err = store.SetMultiple(items)
+		err = store.SetMultiple(ctx, items)
 		fmt.Println("err", err)
 
 		if err != nil {

@@ -2,6 +2,7 @@ package store
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,51 +11,56 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-var storagePathFile string
-
-type FileStore struct {
-	s map[string]string
+type FileStorage interface {
+	Get(ctx context.Context, key string) (value string, ok bool)
+	List(ctx context.Context) map[string]string
+	Ping() error
+	Set(ctx context.Context, key string, value string) error
+	SetMultiple(ctx context.Context, l map[string]string) error
 }
 
-var fileData = &FileStore{s: make(map[string]string)}
+type FileStore struct {
+	s          map[string]string
+	pathToFile string
+}
 
-func (s *FileStore) Get(key string) (value string, ok bool) {
-	value, ok = fileData.s[key]
+func (s *FileStore) Get(ctx context.Context, key string) (value string, ok bool) {
+	value, ok = s.s[key]
 	logger.Infoln("Get key:", key, value)
 	return value, ok
 }
 
-func (s *FileStore) Set(key string, value string) error {
+func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 	if key == "" || value == "" {
 		return fmt.Errorf("invalid input")
 	}
 
-	if _, ok := fileData.s[key]; ok {
+	if _, ok := s.s[key]; ok {
 		return ErrConflict
 	}
 
 	logger.Infoln("Set key:", key, value)
-	fileData.s[key] = value
+	s.s[key] = value
 
-	WriteToFile(key, value)
+	WriteToFile(key, value, s.pathToFile)
 
 	return nil
 }
 
-func (s *FileStore) List() map[string]string {
-	return fileData.s
+func (s *FileStore) List(ctx context.Context) map[string]string {
+	return s.s
 }
 
 func (s *FileStore) Ping() error {
 	return nil
 }
 
-func (s *FileStore) SetMultiple(items map[string]string) error {
+func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) error {
 	for k, v := range items {
 		logger.Infoln("Set key:", k, v)
-		fileData.s[k] = v
+		s.s[k] = v
 
-		WriteToFile(k, v)
+		WriteToFile(k, v, s.pathToFile)
 	}
 	return nil
 }
@@ -105,38 +111,44 @@ func lineToJSON(line string) itemURL {
 	return req
 }
 
-func loadFileIntoMem(storagePath string) {
+func getFileContent(storagePath string) map[string]string {
 	file, err := os.Open(storagePath)
 	if err != nil {
 		logger.Println(err)
 	}
 	defer file.Close()
 
+	data := make(map[string]string)
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line != "" {
 			json := lineToJSON(line)
-			fileData.s[json.Hash] = json.URL
+			data[json.Hash] = json.URL
 		}
 	}
 
 	if err = scanner.Err(); err != nil {
 		logger.Println(err)
 	}
+
+	return data
 }
 
-func NewFileStore(storagePath string) Storage {
+func NewFileStore(storagePath string) FileStorage {
 	createDir(storagePath)
 	createFile(storagePath)
-	loadFileIntoMem(storagePath)
-	storagePathFile = storagePath
+	data := getFileContent(storagePath)
 
-	return &FileStore{}
+	return &FileStore{
+		pathToFile: storagePath,
+		s:          data,
+	}
 }
 
-func WriteToFile(key string, value string) error {
-	f, err := os.OpenFile(storagePathFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+func WriteToFile(key string, value string, pathToFile string) error {
+	f, err := os.OpenFile(pathToFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}

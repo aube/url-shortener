@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,15 +10,15 @@ import (
 )
 
 type StorageList interface {
-	List() map[string]string
+	List(c context.Context) map[string]string
 }
 
-func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
+func HandlerAPIUserUrls(ctx context.Context, store StorageList, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 
-		memData := store.List()
+		memData := store.List(ctx)
 		json := getJSON(memData, baseURL)
 		fmt.Fprintf(w, `%s`, json)
 

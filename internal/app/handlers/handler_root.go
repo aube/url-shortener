@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
+func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)
@@ -48,7 +49,7 @@ func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
 		hash := hasher.CalcHash(originalURL)
 		httpStatus := http.StatusCreated
 
-		err = store.Set(hash, string(originalURL))
+		err = store.Set(ctx, hash, string(originalURL))
 		if err != nil {
 			httpStatus = http.StatusConflict
 		}

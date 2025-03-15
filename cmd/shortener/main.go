@@ -1,62 +1,15 @@
 package main
 
 import (
-	"net/http"
+	"fmt"
 
-	"github.com/aube/url-shortener/internal/app/config"
-	"github.com/aube/url-shortener/internal/app/handlers"
-	"github.com/aube/url-shortener/internal/app/middlewares"
-	"github.com/aube/url-shortener/internal/app/store"
-	"github.com/aube/url-shortener/internal/logger"
-	"github.com/go-chi/chi/v5"
+	"github.com/aube/url-shortener/internal/app"
 )
 
 func main() {
-	config := config.NewConfig()
-
-	var storage store.Storage
-
-	if config.DatabaseDSN != "" {
-		storage = store.NewDBStore(config.DatabaseDSN)
-	} else if config.FileStoragePath != "" {
-		storage = store.NewFileStore(config.FileStoragePath)
-	} else {
-		storage = store.NewMemStore()
-	}
-
-	r := chi.NewRouter()
-
-	r.Group(func(r chi.Router) {
-		r.Use(
-			middlewares.LoggingMiddleware,
-			middlewares.GzipMiddleware,
-		)
-		r.Get("/{id}", handlers.HandlerID(storage))
-		r.Post("/*", handlers.HandlerRoot(storage, config.BaseURL))
-		r.Post("/api/*", handlers.HandlerAPI(storage, config.BaseURL))
-		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(storage, config.BaseURL))
-	})
-
-	r.Group(func(r chi.Router) {
-		r.Use(middlewares.LoggingMiddleware)
-		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(storage, config.BaseURL))
-		r.Get("/ping", handlers.HandlerPing(storage))
-	})
-
-	// empty handler for prevent error on automatic browser favicon request
-	r.Get("/favicon.ico", http.HandlerFunc(handlers.HandlerEmpty))
-
-	if err := logger.Initialize(); err != nil {
-		return
-	}
-
-	address := config.ServerHost + ":" + config.ServerPort
-	logger.Infoln("Server starting at", address)
-
-	err := http.ListenAndServe(address, r)
+	err := app.Run()
 
 	if err != nil {
-		logger.Infoln("Error starting server:", err)
+		fmt.Println(err)
 	}
-
 }

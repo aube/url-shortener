@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,10 +11,10 @@ import (
 )
 
 type StorageSet interface {
-	Set(key string, value string) error
+	Set(c context.Context, key string, value string) error
 }
 
-func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
+func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Body == nil || r.ContentLength == 0 {
@@ -36,7 +37,7 @@ func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		httpStatus := http.StatusCreated
 
-		err = store.Set(hash, string(originalURL))
+		err = store.Set(ctx, hash, string(originalURL))
 		if err != nil {
 			httpStatus = http.StatusConflict
 		}

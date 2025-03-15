@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"errors"
 	"reflect"
 	"time"
@@ -12,17 +13,29 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/pressly/goose/v3"
 )
+
+//go:embed migrations/*.sql
+var embedMigrations embed.FS
+
+type DBStorage interface {
+	Get(ctx context.Context, key string) (value string, ok bool)
+	List(ctx context.Context) map[string]string
+	Ping() error
+	Set(ctx context.Context, key string, value string) error
+	SetMultiple(ctx context.Context, l map[string]string) error
+}
 
 type DBStore struct{}
 
 var db *sql.DB
 
-func (s *DBStore) Get(key string) (value string, ok bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	row := db.QueryRowContext(ctx, "SELECT original_url as originalURL FROM urls WHERE short_url=$1", key)
+	row := db.QueryRowContext(ctx, postgre.selectURL, key)
 	var originalURL string
 	err := row.Scan(&originalURL)
 
@@ -33,11 +46,11 @@ func (s *DBStore) Get(key string) (value string, ok bool) {
 	return originalURL, err == nil
 }
 
-func (s *DBStore) Set(key string, value string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+func (s *DBStore) Set(ctx context.Context, key string, value string) error {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES($1, $2)", key, value)
+	_, err := db.ExecContext(ctx, postgre.insertURL, key, value)
 
 	if err != nil {
 		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
@@ -51,7 +64,7 @@ func (s *DBStore) Set(key string, value string) error {
 	return err
 }
 
-func (s *DBStore) List() map[string]string {
+func (s *DBStore) List(ctx context.Context) map[string]string {
 	m := make(map[string]string)
 	return m
 }
@@ -68,8 +81,8 @@ func (s *DBStore) Ping() error {
 	return nil
 }
 
-func (s *DBStore) SetMultiple(items map[string]string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	tx, err := db.Begin()
@@ -77,8 +90,7 @@ func (s *DBStore) SetMultiple(items map[string]string) error {
 		return err
 	}
 	for k, v := range items {
-		_, err := tx.ExecContext(ctx,
-			"INSERT INTO urls (short_url, original_url) VALUES ($1, $2) ON CONFLICT (short_url) DO NOTHING", k, v)
+		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v)
 
 		if err != nil {
 			// если ошибка, то откатываем
@@ -89,30 +101,29 @@ func (s *DBStore) SetMultiple(items map[string]string) error {
 	return tx.Commit()
 }
 
-func NewDBStore(dsn string) Storage {
+func NewDBStore(dsn string) DBStorage {
 	var err error
 	db, err = sql.Open("pgx", dsn)
 
 	if err != nil {
 		panic(err)
 	}
-	// defer db.Close()
 
-	createDB(db)
+	db.SetConnMaxLifetime(time.Minute * 3)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(10)
+
+	goose.SetBaseFS(embedMigrations)
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		panic(err)
+	}
+
+	if err := goose.Up(db, "migrations"); err != nil {
+		panic(err)
+	}
 
 	logger.Println("DB connection success:", dsn)
 
 	return &DBStore{}
-}
-
-func createDB(db *sql.DB) {
-	ctx := context.Background()
-	_, err := db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS urls (
-        id serial PRIMARY KEY,
-        short_url CHAR(10) UNIQUE,
-        original_url TEXT
-      )`)
-	if err != nil {
-		logger.Println("createDB error:", err)
-	}
 }
