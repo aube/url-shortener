@@ -8,12 +8,27 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-type MemStorage interface {
+type StorageGet interface {
 	Get(ctx context.Context, key string) (value string, ok bool)
+}
+type StorageList interface {
 	List(ctx context.Context) map[string]string
+}
+type StoragePing interface {
 	Ping() error
+}
+type StorageSet interface {
 	Set(ctx context.Context, key string, value string) error
+}
+type StorageSetMultiple interface {
 	SetMultiple(ctx context.Context, l map[string]string) error
+}
+type MemStorage interface {
+	StorageGet
+	StorageList
+	StoragePing
+	StorageSet
+	StorageSetMultiple
 }
 
 type MemoryStore struct {

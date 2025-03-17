@@ -12,11 +12,11 @@ import (
 )
 
 type FileStorage interface {
-	Get(ctx context.Context, key string) (value string, ok bool)
-	List(ctx context.Context) map[string]string
-	Ping() error
-	Set(ctx context.Context, key string, value string) error
-	SetMultiple(ctx context.Context, l map[string]string) error
+	StorageGet
+	StorageList
+	StoragePing
+	StorageSet
+	StorageSetMultiple
 }
 
 type FileStore struct {

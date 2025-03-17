@@ -25,7 +25,6 @@ func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.Han
 			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 			return
 		}
-		defer r.Body.Close()
 
 		originalURL := body
 		contentType := r.Header.Get("Content-Type")

@@ -29,7 +29,6 @@ func HandlerShortenBatch(ctx context.Context, store StorageSetMultiple, baseURL 
 			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 			return
 		}
-		defer r.Body.Close()
 
 		inputJSON := batch2JSON(body)
 		outputBatch := []outputBatchJSONItem{}

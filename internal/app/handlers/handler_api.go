@@ -29,7 +29,6 @@ func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.Hand
 			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 			return
 		}
-		defer r.Body.Close()
 
 		originalURL := readURLFromJSON(body)
 		hash := hasher.CalcHash(originalURL)
