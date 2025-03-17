@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,7 +10,11 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerAPI(MemoryStore Storage, baseURL string) http.HandlerFunc {
+type StorageSet interface {
+	Set(c context.Context, key string, value string) error
+}
+
+func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Body == nil || r.ContentLength == 0 {
@@ -24,20 +29,22 @@ func HandlerAPI(MemoryStore Storage, baseURL string) http.HandlerFunc {
 			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 			return
 		}
-		defer r.Body.Close()
 
 		originalURL := readURLFromJSON(body)
 		hash := hasher.CalcHash(originalURL)
 
-		MemoryStore.Set(hash, string(originalURL))
+		w.Header().Set("Content-Type", "application/json")
+		httpStatus := http.StatusCreated
+
+		err = store.Set(ctx, hash, string(originalURL))
+		if err != nil {
+			httpStatus = http.StatusConflict
+		}
+		w.WriteHeader(httpStatus)
 
 		shortURL := baseURL + "/" + hash
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-
 		fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 
-		logger.Println("URL:", shortURL, http.StatusCreated)
+		logger.Println("URL:", shortURL, httpStatus)
 	}
 }

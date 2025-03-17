@@ -1,12 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerID(MemoryStore Storage) http.HandlerFunc {
+type StorageGet interface {
+	Get(c context.Context, key string) (value string, ok bool)
+}
+
+func HandlerID(ctx context.Context, store StorageGet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 
@@ -17,7 +22,7 @@ func HandlerID(MemoryStore Storage) http.HandlerFunc {
 
 		logger.Println("Requested ID:", id)
 
-		url, ok := MemoryStore.Get(id)
+		url, ok := store.Get(ctx, id)
 		if url == "" || !ok {
 			http.Error(w, "URL not found", http.StatusBadRequest)
 			return

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerRoot(MemoryStore Storage, baseURL string) http.HandlerFunc {
+func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)
@@ -24,7 +25,6 @@ func HandlerRoot(MemoryStore Storage, baseURL string) http.HandlerFunc {
 			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 			return
 		}
-		defer r.Body.Close()
 
 		originalURL := body
 		contentType := r.Header.Get("Content-Type")
@@ -43,21 +43,24 @@ func HandlerRoot(MemoryStore Storage, baseURL string) http.HandlerFunc {
 			originalURL = readURLFromJSON(body)
 			responseContentType = "application/json"
 		}
+		w.Header().Set("Content-Type", responseContentType)
 
 		hash := hasher.CalcHash(originalURL)
-		MemoryStore.Set(hash, string(originalURL))
+		httpStatus := http.StatusCreated
+
+		err = store.Set(ctx, hash, string(originalURL))
+		if err != nil {
+			httpStatus = http.StatusConflict
+		}
+		w.WriteHeader(httpStatus)
 
 		shortURL := baseURL + "/" + hash
-
-		w.Header().Set("Content-Type", responseContentType)
-		w.WriteHeader(http.StatusCreated)
-
 		if responseContentJSON {
 			fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 		} else {
 			fmt.Fprintf(w, "%s", shortURL)
 		}
 
-		logger.Println("URL:", shortURL, http.StatusCreated)
+		logger.Println("URL:", shortURL, httpStatus)
 	}
 }

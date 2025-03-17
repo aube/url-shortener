@@ -15,7 +15,8 @@ fi
  -binary-path=cmd/shortener/shortener \
  -server-port=8080 \
  -file-storage-path=_hashes/hashes_list.json \
- -source-path=.
+ -source-path=. \
+ -database-dsn=123
 
 
 echo "done iteration:" $ITERATION

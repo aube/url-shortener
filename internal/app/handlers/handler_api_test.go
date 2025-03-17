@@ -1,41 +1,58 @@
 package handlers
 
 import (
+	"context"
+	"errors"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-type MockMemoryStore struct{}
+type MockMemoryStore struct {
+	s map[string]string
+}
 
-func (m *MockMemoryStore) Get(s string) (string, bool) {
+/* func (m *MockMemoryStore) Get(s string) (string, bool) {
 	return s, true
-}
+} */
 
-func (m *MockMemoryStore) Set(k string, v string) error {
+func (m *MockMemoryStore) Set(c context.Context, k string, v string) error {
+	if v == "conflict" {
+		return errors.New("")
+	}
 	return nil
 }
 
-func (m *MockMemoryStore) List() map[string]string {
-	return nil
-}
+/*
+	 func (m *MockMemoryStore) List() map[string]string {
+		return nil
+	}
+
+	func (m *MockMemoryStore) Ping() error {
+		return nil
+	}
+*/
 
 func TestHandlerAPI(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	fakeAddress := "http://test.test/test"
-	MemoryStore := &MockMemoryStore{}
-
 	hash := hasher.CalcHash([]byte(fakeAddress))
+	conflictHash := hasher.CalcHash([]byte("conflict"))
+
+	MemoryStore := &MockMemoryStore{
+		s: map[string]string{},
+	}
+
 	type want struct {
 		statusCode   int
-		shortAddress string
+		responseBody string
 	}
 	tests := []struct {
 		name     string
@@ -44,19 +61,28 @@ func TestHandlerAPI(t *testing.T) {
 		want     want
 	}{
 		{
-			name: "fakeAddress body",
+			name: "create short URL",
 			want: want{
 				statusCode:   201,
-				shortAddress: baseURL + "/" + hash,
+				responseBody: baseURL + "/" + hash,
 			},
 			postBody: fakeAddress,
 		},
 
 		{
-			name: "empty body",
+			name: "conflict short URL",
+			want: want{
+				statusCode:   409,
+				responseBody: baseURL + "/" + conflictHash,
+			},
+			postBody: "conflict",
+		},
+
+		{
+			name: "error on empty body",
 			want: want{
 				statusCode:   400,
-				shortAddress: "Request body is empty\n",
+				responseBody: "Request body is empty\n",
 			},
 			postBody: "",
 		},
@@ -66,23 +92,22 @@ func TestHandlerAPI(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
 			w := httptest.NewRecorder()
-			h := HandlerRoot(MemoryStore, baseURL)
+			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			defer cancel()
+			h := HandlerRoot(ctx, MemoryStore, baseURL)
 			h(w, r)
 
 			result := w.Result()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 
-			shortAddressResult, err := io.ReadAll(result.Body)
+			responseBodyResult, err := io.ReadAll(result.Body)
 			require.NoError(t, err)
 
 			err = result.Body.Close()
-			if err != nil {
-				log.Fatal(err)
-			}
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.want.shortAddress, string(shortAddressResult))
+			assert.Equal(t, tt.want.responseBody, string(responseBodyResult))
 		})
 	}
 }
