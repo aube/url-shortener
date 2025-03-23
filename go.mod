@@ -1,6 +1,8 @@
 module github.com/aube/url-shortener
 
-go 1.22.12
+go 1.23
+
+toolchain go1.23.5
 
 require (
 	github.com/caarlos0/env/v6 v6.10.1
