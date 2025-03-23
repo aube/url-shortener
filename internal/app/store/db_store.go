@@ -73,9 +73,9 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 	userID := ctx.Value("userID")
 
-	// if userID == nil {
-	// 	return nil, appErrors.NewHTTPError(401, "user unauthorised")
-	// }
+	if userID == nil {
+		return nil, appErrors.NewHTTPError(401, "user unauthorised")
+	}
 
 	rows, err := db.QueryContext(ctx, postgre.selectURLsByUserID, userID)
 	if err != nil {
