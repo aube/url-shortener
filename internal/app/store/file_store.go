@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	appErrors "github.com/aube/url-shortener/internal/app/app_errors"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
@@ -36,7 +37,7 @@ func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 	}
 
 	if _, ok := s.s[key]; ok {
-		return ErrConflict
+		return appErrors.NewHTTPError(409, "conflict")
 	}
 
 	logger.Infoln("Set key:", key, value)
@@ -47,8 +48,8 @@ func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 	return nil
 }
 
-func (s *FileStore) List(ctx context.Context) map[string]string {
-	return s.s
+func (s *FileStore) List(ctx context.Context) (map[string]string, error) {
+	return s.s, nil
 }
 
 func (s *FileStore) Ping() error {

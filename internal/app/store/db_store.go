@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"embed"
 	"errors"
+	"log"
 	"reflect"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	appErrors "github.com/aube/url-shortener/internal/app/app_errors"
 	"github.com/aube/url-shortener/internal/logger"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -46,26 +48,54 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 }
 
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
+	userID := ctx.Value("userID")
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, postgre.insertURL, key, value)
+	if userID == nil {
+		userID = ""
+	}
+
+	_, err := db.ExecContext(ctx, postgre.insertURL, key, value, userID)
 
 	if err != nil {
 		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			err = ErrConflict
+			err = appErrors.NewHTTPError(409, "conflict")
 		}
-		logger.Println("SQL error", err)
+		logger.Println("SQL error", userID, err)
 	}
 
 	return err
 }
 
-func (s *DBStore) List(ctx context.Context) map[string]string {
+func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
+	userID := ctx.Value("userID")
+
+	// if userID == nil {
+	// 	return nil, appErrors.NewHTTPError(401, "user unauthorised")
+	// }
+
+	rows, err := db.QueryContext(ctx, postgre.selectURLsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	m := make(map[string]string)
-	return m
+
+	// пробегаем по всем записям
+	for rows.Next() {
+		var hash string
+		var URL string
+		err = rows.Scan(&hash, &URL)
+		if err != nil {
+			return nil, err
+		}
+		m[hash] = URL
+	}
+
+	return m, nil
 }
 
 func (s *DBStore) Ping() error {
@@ -81,22 +111,37 @@ func (s *DBStore) Ping() error {
 }
 
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
+	// userID := ctx.Value("userID")
+	userID := "123"
+
+	// if userID == nil {
+	// 	return appErrors.NewHTTPError(403, "user")
+	//  return nil, appErrors.NewHTTPError(401, "user unauthorised")
+	// }
+
+	// после добавления auth middleware появилась ошибка "context deadline exceeded"
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	// ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
+	logger.Infoln("userID", userID)
+
 	for k, v := range items {
-		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v)
+		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v, userID)
 
 		if err != nil {
+			log.Println(postgre.insertURLIgnoreConflicts, k, v, userID)
+			logger.Errorln("err", err)
 			// если ошибка, то откатываем
 			tx.Rollback()
 			return err
 		}
 	}
+
 	return tx.Commit()
 }
 
@@ -122,7 +167,7 @@ func NewDBStore(dsn string) DBStorage {
 		panic(err)
 	}
 
-	logger.Println("DB connection success:", dsn)
+	logger.Println("DB connection success", dsn)
 
 	return &DBStore{}
 }

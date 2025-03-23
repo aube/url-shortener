@@ -42,13 +42,11 @@ func HandlerShortenBatch(ctx context.Context, store StorageSetMultiple, baseURL 
 			})
 			items[hash] = v.URL
 		}
-		fmt.Println("items", items)
-		fmt.Println("outputBatch", outputBatch)
 
 		err = store.SetMultiple(ctx, items)
-		fmt.Println("err", err)
 
 		if err != nil {
+			logger.Println("err", err)
 			http.Error(w, "Failed to write URLs", http.StatusInternalServerError)
 			return
 		}

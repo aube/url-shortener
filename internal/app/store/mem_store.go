@@ -2,9 +2,9 @@ package store
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	appErrors "github.com/aube/url-shortener/internal/app/app_errors"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
@@ -12,7 +12,7 @@ type StorageGet interface {
 	Get(ctx context.Context, key string) (value string, ok bool)
 }
 type StorageList interface {
-	List(ctx context.Context) map[string]string
+	List(ctx context.Context) (map[string]string, error)
 }
 type StoragePing interface {
 	Ping() error
@@ -30,13 +30,9 @@ type MemStorage interface {
 	StorageSet
 	StorageSetMultiple
 }
-
 type MemoryStore struct {
 	s map[string]string
 }
-
-// ErrConflict указывает на конфликт данных в хранилище.
-var ErrConflict = errors.New("data conflict")
 
 func (s *MemoryStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	value, ok = s.s[key]
@@ -50,7 +46,7 @@ func (s *MemoryStore) Set(ctx context.Context, key string, value string) error {
 	}
 
 	if _, ok := s.s[key]; ok {
-		return ErrConflict
+		return appErrors.NewHTTPError(409, "conflict")
 	}
 
 	logger.Infoln("Set key:", key, value)
@@ -63,8 +59,8 @@ func (s *MemoryStore) Ping() error {
 	return nil
 }
 
-func (s *MemoryStore) List(ctx context.Context) map[string]string {
-	return s.s
+func (s *MemoryStore) List(ctx context.Context) (map[string]string, error) {
+	return s.s, nil
 }
 
 func (s *MemoryStore) SetMultiple(ctx context.Context, items map[string]string) error {

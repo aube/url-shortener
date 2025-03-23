@@ -75,9 +75,9 @@ func NewConfig() EnvConfig {
 	config.ServerHost = strings.Split(config.ServerAddress, ":")[0]
 	config.ServerPort = strings.Split(config.ServerAddress, ":")[1]
 
-	logger.Println("serverAddress: " + config.ServerAddress)
-	logger.Println("serverHost: " + config.ServerHost)
-	logger.Println("serverPort: " + config.ServerPort)
+	logger.Println("serverAddress", config.ServerAddress)
+	logger.Println("serverHost", config.ServerHost)
+	logger.Println("serverPort", config.ServerPort)
 
 	initialized = true
 

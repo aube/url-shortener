@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	appErrors "github.com/aube/url-shortener/internal/app/app_errors"
 	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/aube/url-shortener/internal/logger"
 )
@@ -49,9 +51,14 @@ func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.Han
 		httpStatus := http.StatusCreated
 
 		err = store.Set(ctx, hash, string(originalURL))
-		if err != nil {
-			httpStatus = http.StatusConflict
+
+		var herr *appErrors.HTTPError
+		if errors.As(err, &herr) {
+			httpStatus = herr.Code
+			w.WriteHeader(httpStatus)
+			return
 		}
+
 		w.WriteHeader(httpStatus)
 
 		shortURL := baseURL + "/" + hash

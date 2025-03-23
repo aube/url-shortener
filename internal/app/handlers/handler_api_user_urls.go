@@ -3,14 +3,16 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
+	appErrors "github.com/aube/url-shortener/internal/app/app_errors"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
 type StorageList interface {
-	List(c context.Context) map[string]string
+	List(c context.Context) (map[string]string, error)
 }
 
 func HandlerAPIUserUrls(ctx context.Context, store StorageList, baseURL string) http.HandlerFunc {
@@ -18,7 +20,19 @@ func HandlerAPIUserUrls(ctx context.Context, store StorageList, baseURL string) 
 
 		w.Header().Set("Content-Type", "application/json")
 
-		memData := store.List(ctx)
+		memData, err := store.List(ctx)
+
+		var herr *appErrors.HTTPError
+		if errors.As(err, &herr) {
+			w.WriteHeader(herr.Code)
+			return
+		}
+
+		if len(memData) == 0 {
+			w.WriteHeader(204)
+			return
+		}
+
 		json := getJSON(memData, baseURL)
 		fmt.Fprintf(w, `%s`, json)
 

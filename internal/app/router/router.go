@@ -14,7 +14,7 @@ type StorageGet interface {
 	Get(ctx context.Context, key string) (value string, ok bool)
 }
 type StorageList interface {
-	List(ctx context.Context) map[string]string
+	List(ctx context.Context) (map[string]string, error)
 }
 type StoragePing interface {
 	Ping() error
@@ -50,8 +50,17 @@ func Connect(ctx context.Context, storage Storage) chi.Router {
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(middlewares.LoggingMiddleware)
+		r.Use(
+			middlewares.AuthMiddleware,
+			middlewares.LoggingMiddleware,
+		)
 		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(ctx, storage, config.BaseURL))
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(
+			middlewares.LoggingMiddleware,
+		)
 		r.Get("/ping", handlers.HandlerPing(storage))
 	})
 
