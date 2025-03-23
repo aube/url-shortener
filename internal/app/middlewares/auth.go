@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type userID string
+
+const userIDKey = userID("userID")
+
 func authenticateUser(userName, password string) bool {
 	// if password == strings.ToUpper(userName) {
 	// 	return true
@@ -62,7 +66,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			userID = cookie.Value
 		}
 
-		ctx := context.WithValue(r.Context(), "userID", userID)
+		ctx := context.WithValue(r.Context(), userIDKey, userID)
 		r = r.WithContext(ctx)
 
 		username := "123"

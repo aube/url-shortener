@@ -11,7 +11,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	appErrors "github.com/aube/url-shortener/internal/app/app_errors"
+	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/logger"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -32,6 +32,10 @@ type DBStore struct{}
 
 var db *sql.DB
 
+type userID string
+
+const userIDKey = userID("userID")
+
 func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
@@ -48,7 +52,7 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 }
 
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
-	userID := ctx.Value("userID")
+	userID := ctx.Value(userIDKey)
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -71,7 +75,7 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 }
 
 func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
-	userID := ctx.Value("userID")
+	userID := ctx.Value(userIDKey)
 
 	if userID == nil {
 		return nil, appErrors.NewHTTPError(401, "user unauthorised")
@@ -80,6 +84,10 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 	rows, err := db.QueryContext(ctx, postgre.selectURLsByUserID, userID)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := rows.Err(); err != nil {
+		panic(err)
 	}
 
 	m := make(map[string]string)
@@ -111,7 +119,7 @@ func (s *DBStore) Ping() error {
 }
 
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
-	// userID := ctx.Value("userID")
+	// userID := ctx.Value(userIDKey)
 	userID := "123"
 
 	// if userID == nil {

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	appErrors "github.com/aube/url-shortener/internal/app/app_errors"
+	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
