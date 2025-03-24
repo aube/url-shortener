@@ -48,7 +48,7 @@ func Run() error {
 		storage = store.NewMemStore()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 5000*time.Millisecond)
 	defer cancel()
 
 	router := router.Connect(ctx, storage)
