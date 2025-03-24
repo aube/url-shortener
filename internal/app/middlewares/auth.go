@@ -54,16 +54,19 @@ func randUserID() string {
 func AuthMiddleware(next http.Handler) http.Handler {
 	// deleteCookie(w, "auth")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("auth")
-
-		var userID string
-
-		if err == http.ErrNoCookie {
-			userID = randUserID()
-			setCookie(w, "auth", userID)
-			logger.Warnln("Set Cookie auth", userID)
+		userID := r.Header.Get("Authorization")
+		if userID != "" {
+			w.Header().Set("Authorization", userID)
 		} else {
-			userID = cookie.Value
+			cookie, err := r.Cookie("auth")
+			if err == http.ErrNoCookie {
+				userID = randUserID()
+				setCookie(w, "auth", userID)
+				logger.Warnln("Set Cookie auth", userID)
+				w.Header().Set("Authorization", userID)
+			} else {
+				userID = cookie.Value
+			}
 		}
 
 		ctx := context.WithValue(r.Context(), ctxkeys.UserIDKey, userID)
