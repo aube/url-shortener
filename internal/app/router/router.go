@@ -52,9 +52,16 @@ func Connect(ctx context.Context, storage Storage) chi.Router {
 		r.Use(
 			middlewares.AuthMiddleware,
 			middlewares.LoggingMiddleware,
-			middlewares.GzipMiddleware,
 		)
 		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(ctx, storage, config.BaseURL))
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(
+			middlewares.AuthMiddleware,
+			middlewares.LoggingMiddleware,
+			middlewares.GzipMiddleware,
+		)
 		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(ctx, storage, config.BaseURL))
 	})
 

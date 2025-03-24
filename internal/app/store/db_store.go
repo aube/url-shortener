@@ -60,7 +60,7 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 		userID = "0"
 	}
 
-	_, err := db.QueryContext(ctx, postgre.insertURLWithUser, key, value, userID)
+	_, err := db.ExecContext(ctx, postgre.insertURLWithUser, key, value, userID)
 
 	if err != nil {
 		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
