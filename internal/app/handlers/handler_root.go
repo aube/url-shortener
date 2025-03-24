@@ -55,8 +55,8 @@ func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.Han
 		var herr *appErrors.HTTPError
 		if errors.As(err, &herr) {
 			httpStatus = herr.Code
-			w.WriteHeader(httpStatus)
-			return
+			// w.WriteHeader(httpStatus)
+			// return
 		}
 
 		w.WriteHeader(httpStatus)

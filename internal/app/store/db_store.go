@@ -45,7 +45,7 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	err := row.Scan(&originalURL)
 
 	if err != nil {
-		logger.Println("SQL error", err)
+		logger.Errorln("SQL error", err)
 	}
 
 	return originalURL, err == nil
@@ -53,14 +53,21 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 	userID := ctx.Value(userIDKey)
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+
+	// после добавления auth middleware появилась ошибка "context deadline exceeded"
+	// ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+
 	defer cancel()
 
 	if userID == nil {
-		userID = ""
+		userID = "0"
 	}
 
-	_, err := db.ExecContext(ctx, postgre.insertURL, key, value, userID)
+	_, err := db.ExecContext(ctx, postgre.insertURLWithUser, key, value, userID)
+
+	logger.Infoln("userID", userID)
+	logger.Infoln(postgre.insertURL, key, value, userID)
 
 	if err != nil {
 		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
@@ -68,7 +75,7 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 			err = appErrors.NewHTTPError(409, "conflict")
 		}
-		logger.Println("SQL error", userID, err)
+		logger.Errorln("SQL error", err)
 	}
 
 	return err
@@ -113,6 +120,7 @@ func (s *DBStore) Ping() error {
 	logger.Println("DB", reflect.TypeOf(db))
 
 	if err := db.PingContext(ctx); err != nil {
+		logger.Errorln("err", err)
 		return err
 	}
 	return nil
@@ -143,7 +151,7 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 
 		if err != nil {
 			log.Println(postgre.insertURLIgnoreConflicts, k, v, userID)
-			logger.Errorln("err", err)
+			logger.Errorln("SQL error", err)
 			// если ошибка, то откатываем
 			tx.Rollback()
 			return err
