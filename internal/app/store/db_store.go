@@ -60,9 +60,7 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 		userID = "0"
 	}
 
-	id, err := db.QueryContext(ctx, postgre.insertURLWithUser, key, value, userID)
-
-	logger.Infoln("id", id)
+	_, err := db.QueryContext(ctx, postgre.insertURLWithUser, key, value, userID)
 
 	if err != nil {
 		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
@@ -126,10 +124,10 @@ func (s *DBStore) Ping() error {
 }
 
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
-	userID := ctx.Value(ctxkeys.UserIDKey)
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
-	if userID == nil {
-		return appErrors.NewHTTPError(401, "user unauthorised")
+	if userID == "" {
+		userID = "674"
 	}
 
 	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
@@ -144,6 +142,7 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	logger.Infoln("userID", userID)
 
 	for k, v := range items {
+
 		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v, userID)
 
 		if err != nil {
