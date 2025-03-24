@@ -42,6 +42,7 @@ func setCookie(w http.ResponseWriter, name, value string) {
 	}
 
 	http.SetCookie(w, c)
+	logger.Warnln("Set Cookie auth", value)
 }
 
 func randUserID() string {
@@ -55,19 +56,16 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	// deleteCookie(w, "auth")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Header.Get("Authorization")
-		if userID != "" {
-			w.Header().Set("Authorization", userID)
-		} else {
+		if userID == "" {
 			cookie, err := r.Cookie("auth")
 			if err == http.ErrNoCookie {
 				userID = randUserID()
-				setCookie(w, "auth", userID)
-				logger.Warnln("Set Cookie auth", userID)
-				w.Header().Set("Authorization", userID)
 			} else {
 				userID = cookie.Value
 			}
 		}
+		w.Header().Set("Authorization", userID)
+		setCookie(w, "auth", userID)
 
 		ctx := context.WithValue(r.Context(), ctxkeys.UserIDKey, userID)
 		newReq := r.WithContext(ctx)
