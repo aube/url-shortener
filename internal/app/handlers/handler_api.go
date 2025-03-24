@@ -36,7 +36,7 @@ func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.Hand
 		w.Header().Set("Content-Type", "application/json")
 		httpStatus := http.StatusCreated
 
-		err = store.Set(ctx, hash, string(originalURL))
+		err = store.Set(r.Context(), hash, string(originalURL))
 		if err != nil {
 			httpStatus = http.StatusConflict
 		}
