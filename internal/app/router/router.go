@@ -40,6 +40,7 @@ func Connect(ctx context.Context, storage Storage) chi.Router {
 
 	r.Group(func(r chi.Router) {
 		r.Use(
+			middlewares.AuthMiddleware,
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)

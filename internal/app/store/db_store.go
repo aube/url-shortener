@@ -49,16 +49,12 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 }
 
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
-	userID := ctx.Value(ctxkeys.UserIDKey)
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
 	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
 	// ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-
-	if userID == nil {
-		userID = "0"
-	}
 
 	_, err := db.ExecContext(ctx, postgre.insertURLWithUser, key, value, userID)
 
@@ -125,10 +121,6 @@ func (s *DBStore) Ping() error {
 
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
-
-	if userID == "" {
-		userID = "674"
-	}
 
 	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
 	// ctx, cancel := context.WithTimeout(ctx, 3*time.Second)

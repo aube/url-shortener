@@ -50,7 +50,7 @@ func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.Han
 		hash := hasher.CalcHash(originalURL)
 		httpStatus := http.StatusCreated
 
-		err = store.Set(ctx, hash, string(originalURL))
+		err = store.Set(r.Context(), hash, string(originalURL))
 
 		var herr *appErrors.HTTPError
 		if errors.As(err, &herr) {
