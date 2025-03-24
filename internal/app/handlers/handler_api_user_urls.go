@@ -20,7 +20,10 @@ func HandlerAPIUserUrls(ctx context.Context, store StorageList, baseURL string) 
 
 		w.Header().Set("Content-Type", "application/json")
 
-		memData, err := store.List(ctx)
+		// userID := r.Context().Value(ctxkeys.UserIDKey)
+		// ctx := context.WithValue(ctx, ctxkeys.UserIDKey, userID)
+
+		memData, err := store.List(r.Context())
 
 		var herr *appErrors.HTTPError
 		if errors.As(err, &herr) {

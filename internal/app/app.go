@@ -48,7 +48,8 @@ func Run() error {
 		storage = store.NewMemStore()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5000*time.Millisecond)
+	// TODO разобраться с контекстом, пока ставлю таймаут побольше
+	ctx, cancel := context.WithTimeout(context.Background(), 5000*time.Second)
 	defer cancel()
 
 	router := router.Connect(ctx, storage)

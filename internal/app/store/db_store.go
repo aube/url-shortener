@@ -12,6 +12,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
+	"github.com/aube/url-shortener/internal/app/ctxkeys"
 	"github.com/aube/url-shortener/internal/logger"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -32,10 +33,6 @@ type DBStore struct{}
 
 var db *sql.DB
 
-type userID string
-
-const userIDKey = userID("userID")
-
 func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
@@ -52,7 +49,7 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 }
 
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
-	userID := ctx.Value(userIDKey)
+	userID := ctx.Value(ctxkeys.UserIDKey)
 
 	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
 	// ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -80,18 +77,21 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 }
 
 func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
-	userID := ctx.Value(userIDKey)
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
-	if userID == nil {
+	if userID == "" {
 		return nil, appErrors.NewHTTPError(401, "user unauthorised")
 	}
+	logger.Warnln("userID", userID)
 
 	rows, err := db.QueryContext(ctx, postgre.selectURLsByUserID, userID)
 	if err != nil {
+		logger.Errorln("SQL error:", err)
 		return nil, err
 	}
 
 	if err := rows.Err(); err != nil {
+		logger.Errorln("SQL error:", err)
 		panic(err)
 	}
 
@@ -103,6 +103,7 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 		var URL string
 		err = rows.Scan(&hash, &URL)
 		if err != nil {
+			logger.Errorln("SQL error:", err)
 			return nil, err
 		}
 		m[hash] = URL
@@ -125,7 +126,7 @@ func (s *DBStore) Ping() error {
 }
 
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
-	userID := ctx.Value(userIDKey)
+	userID := ctx.Value(ctxkeys.UserIDKey)
 
 	if userID == nil {
 		return appErrors.NewHTTPError(401, "user unauthorised")

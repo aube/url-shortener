@@ -6,11 +6,10 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/aube/url-shortener/internal/app/ctxkeys"
+	"github.com/aube/url-shortener/internal/logger"
 )
-
-type userID string
-
-const userIDKey = userID("userID")
 
 func authenticateUser(userName, password string) bool {
 	// if password == strings.ToUpper(userName) {
@@ -62,12 +61,13 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if err == http.ErrNoCookie {
 			userID = randUserID()
 			setCookie(w, "auth", userID)
+			logger.Warnln("Set Cookie auth", userID)
 		} else {
 			userID = cookie.Value
 		}
 
-		ctx := context.WithValue(r.Context(), userIDKey, userID)
-		r = r.WithContext(ctx)
+		ctx := context.WithValue(r.Context(), ctxkeys.UserIDKey, userID)
+		newReq := r.WithContext(ctx)
 
 		username := "123"
 		password := "123"
@@ -75,7 +75,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, newReq)
 	})
 }
 

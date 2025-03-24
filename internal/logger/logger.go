@@ -6,11 +6,16 @@ import (
 )
 
 func Initialize() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
+	logger := slog.New(
+		slog.NewJSONHandler(os.Stderr,
+			&slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(logger)
 
 	return nil
+}
+
+func Warnln(args ...interface{}) {
+	slog.Warn("*", args...)
 }
 
 func Infoln(args ...interface{}) {
