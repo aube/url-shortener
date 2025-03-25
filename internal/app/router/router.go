@@ -17,7 +17,7 @@ type StorageList interface {
 	List(ctx context.Context) (map[string]string, error)
 }
 type StoragePing interface {
-	Ping() error
+	Ping(ctx context.Context) error
 }
 type StorageSet interface {
 	Set(ctx context.Context, key string, value string) error
@@ -75,7 +75,7 @@ func Connect(ctx context.Context, storage Storage) chi.Router {
 		r.Use(
 			middlewares.LoggingMiddleware,
 		)
-		r.Get("/ping", handlers.HandlerPing(storage))
+		r.Get("/ping", handlers.HandlerPing(ctx, storage))
 	})
 
 	// empty handler for prevent error on automatic browser favicon request

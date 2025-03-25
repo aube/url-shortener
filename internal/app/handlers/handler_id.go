@@ -13,6 +13,8 @@ type StorageGet interface {
 
 func HandlerID(ctx context.Context, store StorageGet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log := logger.WithContext(ctx)
+
 		id := r.PathValue("id")
 
 		if id == "" {
@@ -20,7 +22,7 @@ func HandlerID(ctx context.Context, store StorageGet) http.HandlerFunc {
 			return
 		}
 
-		logger.Println("Requested ID:", id)
+		log.Debug("HandlerID", "id", id)
 
 		url, ok := store.Get(ctx, id)
 		if !ok {
@@ -32,7 +34,7 @@ func HandlerID(ctx context.Context, store StorageGet) http.HandlerFunc {
 			return
 		}
 
-		logger.Println("URL:", url)
+		log.Debug("HandlerID", "url", url)
 
 		w.Header().Set("Location", url)
 		w.WriteHeader(http.StatusTemporaryRedirect)

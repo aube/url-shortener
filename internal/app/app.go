@@ -18,7 +18,7 @@ type StorageList interface {
 	List(ctx context.Context) (map[string]string, error)
 }
 type StoragePing interface {
-	Ping() error
+	Ping(ctx context.Context) error
 }
 type StorageSet interface {
 	Set(ctx context.Context, key string, value string) error
@@ -40,6 +40,7 @@ type Storage interface {
 }
 
 func Run() error {
+
 	config := config.NewConfig()
 
 	var storage Storage
@@ -56,16 +57,18 @@ func Run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5000*time.Second)
 	defer cancel()
 
+	log := logger.WithContext(ctx)
+
 	router := router.Connect(ctx, storage)
 
 	address := config.ServerHost + ":" + config.ServerPort
-	logger.Infoln("Server starting at", address)
+	log.Info("Server starting", "address", address)
 
 	err := http.ListenAndServe(address, router)
 
 	if err != nil {
-		logger.Infoln("Error starting server:", err)
-		return err
+		log.Error("Starting server", "err", err)
+		panic(err)
 	}
 
 	return nil

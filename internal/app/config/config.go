@@ -5,7 +5,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/aube/url-shortener/internal/logger"
 	"github.com/caarlos0/env/v6"
 )
 
@@ -74,10 +73,6 @@ func NewConfig() EnvConfig {
 
 	config.ServerHost = strings.Split(config.ServerAddress, ":")[0]
 	config.ServerPort = strings.Split(config.ServerAddress, ":")[1]
-
-	logger.Println("serverAddress", config.ServerAddress)
-	logger.Println("serverHost", config.ServerHost)
-	logger.Println("serverPort", config.ServerPort)
 
 	initialized = true
 

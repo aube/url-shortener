@@ -32,6 +32,7 @@ func deleteCookie(w http.ResponseWriter, name string) {
 }
 
 func setCookie(w http.ResponseWriter, name, value string) {
+	log := logger.Get()
 	c := &http.Cookie{
 		Name:     name,
 		Value:    value,
@@ -42,7 +43,7 @@ func setCookie(w http.ResponseWriter, name, value string) {
 	}
 
 	http.SetCookie(w, c)
-	logger.Warnln("Set Cookie auth", value)
+	log.Warn("setCookie", "value", value)
 }
 
 func randUserID() string {

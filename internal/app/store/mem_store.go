@@ -15,7 +15,7 @@ type StorageList interface {
 	List(ctx context.Context) (map[string]string, error)
 }
 type StoragePing interface {
-	Ping() error
+	Ping(ctx context.Context) error
 }
 type StorageSet interface {
 	Set(ctx context.Context, key string, value string) error
@@ -39,12 +39,16 @@ type MemoryStore struct {
 }
 
 func (s *MemoryStore) Get(ctx context.Context, key string) (value string, ok bool) {
+	log := logger.WithContext(ctx)
+
 	value, ok = s.s[key]
-	logger.Infoln("Get key:", key, value)
+	log.Info("Get key:", key, value)
 	return value, ok
 }
 
 func (s *MemoryStore) Set(ctx context.Context, key string, value string) error {
+	log := logger.WithContext(ctx)
+
 	if key == "" || value == "" {
 		return fmt.Errorf("invalid input")
 	}
@@ -53,13 +57,13 @@ func (s *MemoryStore) Set(ctx context.Context, key string, value string) error {
 		return appErrors.NewHTTPError(409, "conflict")
 	}
 
-	logger.Infoln("Set key:", key, value)
+	log.Info("Set key:", key, value)
 	s.s[key] = value
 
 	return nil
 }
 
-func (s *MemoryStore) Ping() error {
+func (s *MemoryStore) Ping(ctx context.Context) error {
 	return nil
 }
 
@@ -68,16 +72,20 @@ func (s *MemoryStore) List(ctx context.Context) (map[string]string, error) {
 }
 
 func (s *MemoryStore) SetMultiple(ctx context.Context, items map[string]string) error {
+	log := logger.WithContext(ctx)
+
 	for k, v := range items {
-		logger.Infoln("Set key:", k, v)
+		log.Info("Set key:", k, v)
 		s.s[k] = v
 	}
 	return nil
 }
 
 func (s *MemoryStore) Delete(ctx context.Context, hashes []interface{}) error {
+	log := logger.WithContext(ctx)
+
 	for _, v := range hashes {
-		logger.Infoln("Del hash:", v)
+		log.Info("Del hash:", v)
 		s.s[v.(string)] = ""
 	}
 	return nil

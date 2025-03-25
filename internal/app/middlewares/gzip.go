@@ -83,6 +83,8 @@ func (c *compressReader) Close() error {
 */
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log := logger.Get()
+
 		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
 		// который будем передавать следующей функции
 		ow := w
@@ -103,7 +105,7 @@ func GzipMiddleware(next http.Handler) http.Handler {
 		contentEncoding := r.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
 
-		logger.Println("sendsGzip", sendsGzip)
+		log.Debug("GzipMiddleware", "sendsGzip", sendsGzip)
 		if sendsGzip {
 			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
 			cr, err := newCompressReader(r.Body)

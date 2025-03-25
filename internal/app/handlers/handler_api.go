@@ -16,6 +16,7 @@ type StorageSet interface {
 
 func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log := logger.WithContext(ctx)
 
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)
@@ -45,6 +46,6 @@ func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.Hand
 		shortURL := baseURL + "/" + hash
 		fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 
-		logger.Println("URL:", shortURL, httpStatus)
+		log.Debug("URL:", shortURL, httpStatus)
 	}
 }

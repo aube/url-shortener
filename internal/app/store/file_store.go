@@ -27,12 +27,16 @@ type FileStore struct {
 }
 
 func (s *FileStore) Get(ctx context.Context, key string) (value string, ok bool) {
+	log := logger.WithContext(ctx)
+
 	value, ok = s.s[key]
-	logger.Infoln("Get key:", key, value)
+	log.Info("Get key:", key, value)
 	return value, ok
 }
 
 func (s *FileStore) Set(ctx context.Context, key string, value string) error {
+	log := logger.WithContext(ctx)
+
 	if key == "" || value == "" {
 		return fmt.Errorf("invalid input")
 	}
@@ -41,7 +45,7 @@ func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 		return appErrors.NewHTTPError(409, "conflict")
 	}
 
-	logger.Infoln("Set key:", key, value)
+	log.Info("Set key:", key, value)
 	s.s[key] = value
 
 	WriteToFile(key, value, s.pathToFile)
@@ -53,13 +57,15 @@ func (s *FileStore) List(ctx context.Context) (map[string]string, error) {
 	return s.s, nil
 }
 
-func (s *FileStore) Ping() error {
+func (s *FileStore) Ping(ctx context.Context) error {
 	return nil
 }
 
 func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) error {
+	log := logger.WithContext(ctx)
+
 	for k, v := range items {
-		logger.Infoln("Set key:", k, v)
+		log.Info("Set key:", k, v)
 		s.s[k] = v
 
 		WriteToFile(k, v, s.pathToFile)
@@ -68,8 +74,10 @@ func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) er
 }
 
 func (s *FileStore) Delete(ctx context.Context, hashes []interface{}) error {
+	log := logger.WithContext(ctx)
+
 	for _, v := range hashes {
-		logger.Infoln("Del hash:", v)
+		log.Info("Del hash:", v)
 		s.s[v.(string)] = ""
 
 		//TODO: rename WriteToFile > AddToFile and add func RewriteFile
@@ -83,16 +91,19 @@ func getDirFromPath(path string) (dir string) {
 }
 
 func createDir(storagePath string) {
+	log := logger.Get()
+
 	d := getDirFromPath(storagePath)
 
-	logger.Println("create dir:", d)
-
 	if err := os.MkdirAll(d, os.ModePerm); err != nil {
+		log.Error("createDir", "storagePath", storagePath, "err", err)
 		panic(err)
 	}
 }
 
 func createFile(storagePath string) {
+	log := logger.Get()
+
 	if _, err := os.Stat(storagePath); err == nil {
 		// file exists
 		return
@@ -100,10 +111,9 @@ func createFile(storagePath string) {
 
 	data := []byte("")
 	f, err := os.Create(storagePath)
-	logger.Println("create file:", storagePath)
 
 	if err != nil {
-		logger.Println("Unable to create file:", err)
+		log.Error("createFile", "storagePath", storagePath, "err", err)
 		panic(err)
 	}
 	defer f.Close()
@@ -124,9 +134,11 @@ func lineToJSON(line string) itemURL {
 }
 
 func getFileContent(storagePath string) map[string]string {
+	log := logger.Get()
+
 	file, err := os.Open(storagePath)
 	if err != nil {
-		logger.Println(err)
+		log.Error("getFileContent", "err", err)
 	}
 	defer file.Close()
 
@@ -142,7 +154,7 @@ func getFileContent(storagePath string) map[string]string {
 	}
 
 	if err = scanner.Err(); err != nil {
-		logger.Println(err)
+		log.Error("getFileContent", "scanner.err", err)
 	}
 
 	return data
@@ -160,6 +172,8 @@ func NewFileStore(storagePath string) FileStorage {
 }
 
 func WriteToFile(key string, value string, pathToFile string) error {
+	log := logger.Get()
+
 	f, err := os.OpenFile(pathToFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
@@ -175,6 +189,6 @@ func WriteToFile(key string, value string, pathToFile string) error {
 		return err
 	}
 
-	logger.Println("WriteToFile:", json)
+	log.Debug("WriteToFile", "json", json)
 	return nil
 }

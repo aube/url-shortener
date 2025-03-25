@@ -17,7 +17,7 @@ type StorageList interface {
 
 func HandlerAPIUserUrls(ctx context.Context, store StorageList, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
+		log := logger.WithContext(ctx)
 		w.Header().Set("Content-Type", "application/json")
 
 		// userID := r.Context().Value(ctxkeys.UserIDKey)
@@ -36,8 +36,13 @@ func HandlerAPIUserUrls(ctx context.Context, store StorageList, baseURL string) 
 			return
 		}
 
-		json := getJSON(memData, baseURL)
-		fmt.Fprintf(w, `%s`, json)
+		json, err := getJSON(memData, baseURL)
+
+		if err != nil {
+			log.Error("getJSON", "err", err)
+		}
+
+		fmt.Fprintf(w, `%s`, string(json))
 
 		w.WriteHeader(http.StatusOK)
 	}
@@ -48,18 +53,14 @@ type JSONItem struct {
 	URL  string `json:"original_url"`
 }
 
-func getJSON(memData map[string]string, baseURL string) string {
+func getJSON(memData map[string]string, baseURL string) ([]byte, error) {
+
 	var jsonData []JSONItem
 
 	for k, v := range memData {
 		item := JSONItem{Hash: baseURL + "/" + k, URL: v}
 		jsonData = append(jsonData, item)
 	}
-	jsonBytes, err := json.Marshal(jsonData)
 
-	if err != nil {
-		logger.Infoln(err)
-	}
-
-	return string(jsonBytes)
+	return json.Marshal(jsonData)
 }

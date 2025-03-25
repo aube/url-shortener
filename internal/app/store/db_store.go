@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"embed"
 	"errors"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -37,6 +36,8 @@ type DBStore struct{}
 var db *sql.DB
 
 func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
+	log := logger.WithContext(ctx)
+
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -47,7 +48,7 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	err := row.Scan(&originalURL, &deleted)
 
 	if err != nil {
-		logger.Errorln("SQL error", err)
+		log.Error("Get", "err", err)
 		return "", false
 	}
 	if deleted {
@@ -58,6 +59,8 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 }
 
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
+	log := logger.WithContext(ctx)
+
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
 	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
@@ -73,28 +76,30 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 			err = appErrors.NewHTTPError(409, "conflict")
 		}
-		logger.Errorln("SQL error", err)
+		log.Error("Set", "err", err)
 	}
 
 	return err
 }
 
 func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
+	log := logger.WithContext(ctx)
+
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
 	if userID == "" {
 		return nil, appErrors.NewHTTPError(401, "user unauthorised")
 	}
-	logger.Warnln("userID", userID)
+	log.Warn("List", "userID", userID)
 
 	rows, err := db.QueryContext(ctx, postgre.selectURLsByUserID, userID)
 	if err != nil {
-		logger.Errorln("SQL error:", err)
+		log.Error("List", "err", err)
 		return nil, err
 	}
 
 	if err := rows.Err(); err != nil {
-		logger.Errorln("SQL error:", err)
+		log.Error("List", "rows.Err", err)
 		panic(err)
 	}
 
@@ -106,7 +111,7 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 		var URL string
 		err = rows.Scan(&hash, &URL)
 		if err != nil {
-			logger.Errorln("SQL error:", err)
+			log.Error("List", "err", err)
 			return nil, err
 		}
 		m[hash] = URL
@@ -115,20 +120,24 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 	return m, nil
 }
 
-func (s *DBStore) Ping() error {
+func (s *DBStore) Ping(ctx context.Context) error {
+	log := logger.WithContext(ctx)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	logger.Println("DB", reflect.TypeOf(db))
+	log.Debug("Ping", "db", reflect.TypeOf(db))
 
 	if err := db.PingContext(ctx); err != nil {
-		logger.Errorln("err", err)
+		log.Error("Ping", "err", err)
 		return err
 	}
 	return nil
 }
 
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
+	log := logger.WithContext(ctx)
+
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
 	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
@@ -140,15 +149,14 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	if err != nil {
 		return err
 	}
-	logger.Infoln("userID", userID)
+	log.Info("SetMultiple", "userID", userID)
 
 	for k, v := range items {
 
 		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v, userID)
 
 		if err != nil {
-			log.Println(postgre.insertURLIgnoreConflicts, k, v, userID)
-			logger.Errorln("SQL error", err)
+			log.Error("SetMultiple", "err", err)
 			// если ошибка, то откатываем
 			tx.Rollback()
 			return err
@@ -159,6 +167,8 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 }
 
 func (s *DBStore) Delete(ctx context.Context, hashes []interface{}) error {
+	log := logger.WithContext(ctx)
+
 	values := make([]interface{}, len(hashes)+1)
 	valuesKeys := make([]string, len(hashes))
 
@@ -181,10 +191,8 @@ func (s *DBStore) Delete(ctx context.Context, hashes []interface{}) error {
 
 	_, err := db.ExecContext(ctx, query, values...)
 
-	logger.Errorln("query", query)
-	logger.Errorln("values", values)
 	if err != nil {
-		logger.Errorln("SQL error", err)
+		log.Error("Delete", "query", query, "values", values)
 		return err
 	}
 
@@ -192,6 +200,8 @@ func (s *DBStore) Delete(ctx context.Context, hashes []interface{}) error {
 }
 
 func NewDBStore(dsn string) DBStorage {
+	log := logger.Get()
+
 	var err error
 	db, err = sql.Open("pgx", dsn)
 
@@ -213,7 +223,7 @@ func NewDBStore(dsn string) DBStorage {
 		panic(err)
 	}
 
-	logger.Println("DB connection success", dsn)
+	log.Debug("NewDBStore", "dsn", dsn)
 
 	return &DBStore{}
 }

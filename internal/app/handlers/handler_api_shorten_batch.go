@@ -17,6 +17,8 @@ type StorageSetMultiple interface {
 
 func HandlerShortenBatch(ctx context.Context, store StorageSetMultiple, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log := logger.WithContext(ctx)
+
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)
 			return
@@ -46,7 +48,7 @@ func HandlerShortenBatch(ctx context.Context, store StorageSetMultiple, baseURL 
 		err = store.SetMultiple(r.Context(), items)
 
 		if err != nil {
-			logger.Errorln("err", err)
+			log.Error("SetMultiple", "err", err)
 			http.Error(w, "Failed to write URLs", http.StatusInternalServerError)
 			return
 		}
@@ -54,7 +56,7 @@ func HandlerShortenBatch(ctx context.Context, store StorageSetMultiple, baseURL 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, `%s`, JSON2batch(outputBatch))
+		fmt.Fprintf(w, `%s`, JSON2Batch(outputBatch))
 	}
 }
 
@@ -64,12 +66,13 @@ type inputBatchJSONItem struct {
 }
 
 func batch2JSON(body []byte) []inputBatchJSONItem {
+	log := logger.Get()
 
 	inputJSON := []inputBatchJSONItem{}
 	err := json.Unmarshal(body, &inputJSON)
 
 	if err != nil {
-		logger.Infoln(err)
+		log.Error("batch2JSON", "err", err)
 	}
 
 	return inputJSON
@@ -80,11 +83,12 @@ type outputBatchJSONItem struct {
 	SHORT string `json:"short_url"`
 }
 
-func JSON2batch(outputJSON []outputBatchJSONItem) []byte {
+func JSON2Batch(outputJSON []outputBatchJSONItem) []byte {
+	log := logger.Get()
 	jsonBytes, err := json.Marshal(outputJSON)
 
 	if err != nil {
-		logger.Infoln(err)
+		log.Error("JSON2Batch", "err", err)
 	}
 
 	return jsonBytes
