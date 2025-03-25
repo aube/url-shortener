@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS urls (
         user_id int,
         short_url CHAR(10) UNIQUE,
         original_url TEXT,
-        deleted boolean
+        deleted boolean default false
     );
 -- +goose StatementEnd
 

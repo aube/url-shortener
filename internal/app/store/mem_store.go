@@ -23,12 +23,16 @@ type StorageSet interface {
 type StorageSetMultiple interface {
 	SetMultiple(ctx context.Context, l map[string]string) error
 }
+type StorageDelete interface {
+	Delete(ctx context.Context, l []interface{}) error
+}
 type MemStorage interface {
 	StorageGet
 	StorageList
 	StoragePing
 	StorageSet
 	StorageSetMultiple
+	StorageDelete
 }
 type MemoryStore struct {
 	s map[string]string
@@ -67,6 +71,14 @@ func (s *MemoryStore) SetMultiple(ctx context.Context, items map[string]string) 
 	for k, v := range items {
 		logger.Infoln("Set key:", k, v)
 		s.s[k] = v
+	}
+	return nil
+}
+
+func (s *MemoryStore) Delete(ctx context.Context, hashes []interface{}) error {
+	for _, v := range hashes {
+		logger.Infoln("Del hash:", v)
+		s.s[v.(string)] = ""
 	}
 	return nil
 }

@@ -25,6 +25,9 @@ type StorageSet interface {
 type StorageSetMultiple interface {
 	SetMultiple(ctx context.Context, l map[string]string) error
 }
+type StorageDelete interface {
+	Delete(ctx context.Context, l []interface{}) error
+}
 
 type Storage interface {
 	StorageGet
@@ -32,6 +35,7 @@ type Storage interface {
 	StoragePing
 	StorageSet
 	StorageSetMultiple
+	StorageDelete
 }
 
 func Connect(ctx context.Context, storage Storage) chi.Router {
@@ -55,6 +59,7 @@ func Connect(ctx context.Context, storage Storage) chi.Router {
 			middlewares.LoggingMiddleware,
 		)
 		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(ctx, storage, config.BaseURL))
+		r.Delete("/api/user/urls", handlers.HandlerAPIUserUrlsDel(ctx, storage, config.BaseURL))
 	})
 
 	r.Group(func(r chi.Router) {

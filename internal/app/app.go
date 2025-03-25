@@ -26,6 +26,9 @@ type StorageSet interface {
 type StorageSetMultiple interface {
 	SetMultiple(ctx context.Context, l map[string]string) error
 }
+type StorageDelete interface {
+	Delete(ctx context.Context, l []interface{}) error
+}
 
 type Storage interface {
 	StorageGet
@@ -33,6 +36,7 @@ type Storage interface {
 	StoragePing
 	StorageSet
 	StorageSetMultiple
+	StorageDelete
 }
 
 func Run() error {

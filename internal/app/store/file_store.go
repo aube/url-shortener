@@ -18,6 +18,7 @@ type FileStorage interface {
 	StoragePing
 	StorageSet
 	StorageSetMultiple
+	StorageDelete
 }
 
 type FileStore struct {
@@ -62,6 +63,16 @@ func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) er
 		s.s[k] = v
 
 		WriteToFile(k, v, s.pathToFile)
+	}
+	return nil
+}
+
+func (s *FileStore) Delete(ctx context.Context, hashes []interface{}) error {
+	for _, v := range hashes {
+		logger.Infoln("Del hash:", v)
+		s.s[v.(string)] = ""
+
+		//TODO: rename WriteToFile > AddToFile and add func RewriteFile
 	}
 	return nil
 }

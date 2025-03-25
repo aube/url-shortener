@@ -7,6 +7,8 @@ import (
 	"errors"
 	"log"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -28,6 +30,7 @@ type DBStorage interface {
 	StoragePing
 	StorageSet
 	StorageSetMultiple
+	StorageDelete
 }
 type DBStore struct{}
 
@@ -39,13 +42,19 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 
 	row := db.QueryRowContext(ctx, postgre.selectURL, key)
 	var originalURL string
-	err := row.Scan(&originalURL)
+	var deleted bool
+
+	err := row.Scan(&originalURL, &deleted)
 
 	if err != nil {
 		logger.Errorln("SQL error", err)
+		return "", false
+	}
+	if deleted {
+		return "", true
 	}
 
-	return originalURL, err == nil
+	return originalURL, true
 }
 
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
@@ -147,6 +156,39 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	}
 
 	return tx.Commit()
+}
+
+func (s *DBStore) Delete(ctx context.Context, hashes []interface{}) error {
+	values := make([]interface{}, len(hashes)+1)
+	valuesKeys := make([]string, len(hashes))
+
+	values[0] = ctx.Value(ctxkeys.UserIDKey).(string)
+
+	for i := 0; i < len(hashes); i++ {
+		values[i+1] = hashes[i]
+		valuesKeys[i] = "$" + strconv.Itoa(i+2)
+	}
+
+	r := strings.NewReplacer("$$$", strings.Join(valuesKeys, ","))
+	query := r.Replace(postgre.setDeletedRows)
+
+	// userID := ctx.Value(ctxkeys.UserIDKey).(string)
+
+	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
+	// ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, query, values...)
+
+	logger.Errorln("query", query)
+	logger.Errorln("values", values)
+	if err != nil {
+		logger.Errorln("SQL error", err)
+		return err
+	}
+
+	return nil
 }
 
 func NewDBStore(dsn string) DBStorage {

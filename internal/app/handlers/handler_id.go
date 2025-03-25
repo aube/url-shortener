@@ -23,8 +23,12 @@ func HandlerID(ctx context.Context, store StorageGet) http.HandlerFunc {
 		logger.Println("Requested ID:", id)
 
 		url, ok := store.Get(ctx, id)
-		if url == "" || !ok {
+		if !ok {
 			http.Error(w, "URL not found", http.StatusBadRequest)
+			return
+		}
+		if url == "" && ok {
+			http.Error(w, "URL deleted", http.StatusGone)
 			return
 		}
 
