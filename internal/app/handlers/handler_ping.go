@@ -12,8 +12,9 @@ type StoragePing interface {
 	Ping(ctx context.Context) error
 }
 
-func HandlerPing(ctx context.Context, store StoragePing) http.HandlerFunc {
+func HandlerPing(store StoragePing) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		log := logger.WithContext(ctx)
 
 		err := store.Ping(ctx)

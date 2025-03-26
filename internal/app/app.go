@@ -2,13 +2,12 @@ package app
 
 import (
 	"context"
+	"log"
 	"net/http"
-	"time"
 
 	"github.com/aube/url-shortener/internal/app/config"
 	"github.com/aube/url-shortener/internal/app/router"
 	"github.com/aube/url-shortener/internal/app/store"
-	"github.com/aube/url-shortener/internal/logger"
 )
 
 type StorageGet interface {
@@ -53,22 +52,15 @@ func Run() error {
 		storage = store.NewMemStore()
 	}
 
-	// TODO разобраться с контекстом, пока ставлю таймаут побольше
-	ctx, cancel := context.WithTimeout(context.Background(), 5000*time.Second)
-	defer cancel()
-
-	log := logger.WithContext(ctx)
-
-	router := router.Connect(ctx, storage)
+	router := router.Connect(storage)
 
 	address := config.ServerHost + ":" + config.ServerPort
-	log.Info("Server starting", "address", address)
+	log.Println("Server starting", "address", address)
 
 	err := http.ListenAndServe(address, router)
 
 	if err != nil {
-		log.Error("Starting server", "err", err)
-		panic(err)
+		log.Fatal("Starting server", "err", err)
 	}
 
 	return nil

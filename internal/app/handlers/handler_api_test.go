@@ -106,9 +106,7 @@ func TestHandlerAPI(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
 			r.AddCookie(cookie)
 			w := httptest.NewRecorder()
-			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-			defer cancel()
-			h := HandlerRoot(ctx, MemoryStore, baseURL)
+			h := HandlerRoot(MemoryStore, baseURL)
 			h(w, r)
 
 			result := w.Result()

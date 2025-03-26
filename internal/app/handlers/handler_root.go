@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,8 +12,9 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
+func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		log := logger.WithContext(ctx)
 
 		if r.Body == nil || r.ContentLength == 0 {

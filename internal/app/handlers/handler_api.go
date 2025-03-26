@@ -14,8 +14,9 @@ type StorageSet interface {
 	Set(c context.Context, key string, value string) error
 }
 
-func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
+func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		log := logger.WithContext(ctx)
 
 		if r.Body == nil || r.ContentLength == 0 {

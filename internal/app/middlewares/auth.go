@@ -11,16 +11,15 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func authenticateUser(userName, password string) bool {
-	// if password == strings.ToUpper(userName) {
-	// 	return true
-	// }
+const authCookieName = "auth"
+
+func authenticateUser() bool {
 	return true
 }
 
-func deleteCookie(w http.ResponseWriter, name string) {
+func deleteAuthCookie(w http.ResponseWriter) {
 	c := &http.Cookie{
-		Name:     name,
+		Name:     authCookieName,
 		Value:    "",
 		Expires:  time.Unix(0, 0), // Cookie expires in 24 hours
 		Path:     "/",             // Cookie is accessible across the entire site
@@ -31,10 +30,10 @@ func deleteCookie(w http.ResponseWriter, name string) {
 	http.SetCookie(w, c)
 }
 
-func setCookie(w http.ResponseWriter, name, value string) {
+func setAuthCookie(w http.ResponseWriter, value string) {
 	log := logger.Get()
 	c := &http.Cookie{
-		Name:     name,
+		Name:     authCookieName,
 		Value:    value,
 		Expires:  time.Now().Add(24 * time.Hour), // Cookie expires in 24 hours
 		Path:     "/",                            // Cookie is accessible across the entire site
@@ -54,11 +53,10 @@ func randUserID() string {
 }
 
 func AuthMiddleware(next http.Handler) http.Handler {
-	// deleteCookie(w, "auth")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Header.Get("Authorization")
 		if userID == "" {
-			cookie, err := r.Cookie("auth")
+			cookie, err := r.Cookie(authCookieName)
 			if err == http.ErrNoCookie {
 				userID = randUserID()
 			} else {
@@ -66,36 +64,16 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			}
 		}
 		w.Header().Set("Authorization", userID)
-		setCookie(w, "auth", userID)
+		setAuthCookie(w, userID)
 
 		ctx := context.WithValue(r.Context(), ctxkeys.UserIDKey, userID)
 		newReq := r.WithContext(ctx)
 
-		username := "123"
-		password := "123"
-		if !authenticateUser(username, password) {
+		if !authenticateUser() {
+			deleteAuthCookie(w)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		next.ServeHTTP(w, newReq)
 	})
 }
-
-// package main
-
-// import (
-// 	"net/http"
-// 	"strings"
-// // )
-
-// func main() {
-// 	authorizeAdmin := authMiddleware.NewAuthorizationMiddleware(func(r *http.Request, value string) bool {
-// 		return value == "admin"
-// 	})
-// 	http.Handle("/", helloWorld)
-// 	http.Handle("/admin", authenticate(authorizeAdmin(helloAdmin)))
-// 	err := http.ListenAndServe("localhost:9090", nil)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// }

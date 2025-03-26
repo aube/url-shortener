@@ -11,7 +11,7 @@ type StorageDelete interface {
 	Delete(c context.Context, l []interface{}) error
 }
 
-func HandlerAPIUserUrlsDel(ctx context.Context, store StorageDelete, baseURL string) http.HandlerFunc {
+func HandlerAPIUserUrlsDel(store StorageDelete, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Read the entire body content

@@ -11,8 +11,9 @@ type StorageGet interface {
 	Get(c context.Context, key string) (value string, ok bool)
 }
 
-func HandlerID(ctx context.Context, store StorageGet) http.HandlerFunc {
+func HandlerID(store StorageGet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		log := logger.WithContext(ctx)
 
 		id := r.PathValue("id")

@@ -15,8 +15,9 @@ type StorageList interface {
 	List(c context.Context) (map[string]string, error)
 }
 
-func HandlerAPIUserUrls(ctx context.Context, store StorageList, baseURL string) http.HandlerFunc {
+func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		log := logger.WithContext(ctx)
 		w.Header().Set("Content-Type", "application/json")
 

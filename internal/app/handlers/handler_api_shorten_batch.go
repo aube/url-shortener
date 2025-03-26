@@ -15,8 +15,9 @@ type StorageSetMultiple interface {
 	SetMultiple(context.Context, map[string]string) error
 }
 
-func HandlerShortenBatch(ctx context.Context, store StorageSetMultiple, baseURL string) http.HandlerFunc {
+func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		log := logger.WithContext(ctx)
 
 		if r.Body == nil || r.ContentLength == 0 {
