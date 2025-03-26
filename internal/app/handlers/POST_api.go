@@ -39,6 +39,7 @@ func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
 		httpStatus := http.StatusCreated
 
 		err = store.Set(r.Context(), hash, string(originalURL))
+
 		if err != nil {
 			httpStatus = http.StatusConflict
 		}
