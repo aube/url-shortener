@@ -9,13 +9,14 @@ import (
 )
 
 type EnvConfig struct {
-	BaseURL         string `env:"BASE_URL"`
-	ServerAddress   string `env:"SERVER_ADDRESS"`
-	ServerHost      string
-	ServerPort      string
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	FileStorageDir  string `env:"FILE_STORAGE_DIR"`
-	DatabaseDSN     string `env:"DATABASE_DSN"`
+	BaseURL               string `env:"BASE_URL"`
+	ServerAddress         string `env:"SERVER_ADDRESS"`
+	ServerHost            string
+	ServerPort            string
+	FileStoragePath       string `env:"FILE_STORAGE_PATH"`
+	FileStorageDir        string `env:"FILE_STORAGE_DIR"`
+	DatabaseDSN           string `env:"DATABASE_DSN"`
+	DefaultRequestTimeout int    `env:"DEFAULT_REQUEST_TIMEOUT"`
 }
 
 var config EnvConfig
@@ -69,6 +70,10 @@ func NewConfig() EnvConfig {
 
 	if config.DatabaseDSN == "" {
 		config.DatabaseDSN = flagDatabaseDSN
+	}
+
+	if config.DefaultRequestTimeout < 1 {
+		config.DefaultRequestTimeout = 5
 	}
 
 	config.ServerHost = strings.Split(config.ServerAddress, ":")[0]
