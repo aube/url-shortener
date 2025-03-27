@@ -102,10 +102,17 @@ func setAuthCookie(w http.ResponseWriter, value string) {
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log := logger.WithContext(r.Context())
+
 		tokenString := ""
 		authHeader := r.Header.Get("Authorization")
 
-		log := logger.WithContext(r.Context())
+		if authHeader == "" {
+			cookie, err := r.Cookie(authCookieName)
+			if err == nil {
+				authHeader = cookie.Value
+			}
+		}
 
 		if authHeader != "" {
 			// The token should be in the format "Bearer <token>"
