@@ -16,7 +16,9 @@ type EnvConfig struct {
 	FileStoragePath       string `env:"FILE_STORAGE_PATH"`
 	FileStorageDir        string `env:"FILE_STORAGE_DIR"`
 	DatabaseDSN           string `env:"DATABASE_DSN"`
-	DefaultRequestTimeout int    `env:"DEFAULT_REQUEST_TIMEOUT"`
+	TokenSecretString     string `env:"DATABASE_DSN ^_^ "`
+	TokenSecret           []byte
+	DefaultRequestTimeout int `env:"DEFAULT_REQUEST_TIMEOUT"`
 }
 
 var config EnvConfig
@@ -78,6 +80,7 @@ func NewConfig() EnvConfig {
 
 	config.ServerHost = strings.Split(config.ServerAddress, ":")[0]
 	config.ServerPort = strings.Split(config.ServerAddress, ":")[1]
+	config.TokenSecret = []byte(config.TokenSecretString)
 
 	initialized = true
 
