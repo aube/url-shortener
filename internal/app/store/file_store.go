@@ -65,7 +65,7 @@ func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) er
 	log := logger.WithContext(ctx)
 
 	for k, v := range items {
-		log.Info("Set key:", k, v)
+		log.Info("SetMultiple", "key", k, "value", v)
 		s.s[k] = v
 
 		WriteToFile(k, v, s.pathToFile)
@@ -73,12 +73,12 @@ func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) er
 	return nil
 }
 
-func (s *FileStore) Delete(ctx context.Context, hashes []interface{}) error {
+func (s *FileStore) Delete(ctx context.Context, hashes []string) error {
 	log := logger.WithContext(ctx)
 
 	for _, v := range hashes {
-		log.Info("Del hash:", v)
-		s.s[v.(string)] = ""
+		log.Info("Delete", "hash", v)
+		s.s[v] = ""
 	}
 	return nil
 }

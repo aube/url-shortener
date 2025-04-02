@@ -162,12 +162,13 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	return tx.Commit()
 }
 
-func (s *DBStore) Delete(ctx context.Context, hashes []interface{}) error {
+func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
 	log := logger.WithContext(ctx)
 
-	values := make([]interface{}, len(hashes)+1)
-	valuesKeys := make([]string, len(hashes))
+	values := make([]interface{}, len(hashes)+1) // array of query values
+	valuesKeys := make([]string, len(hashes))    // "$2,$3...$n"
 
+	// first value in query sets for: user_id=$1
 	values[0] = ctx.Value(ctxkeys.UserIDKey).(string)
 
 	for i := 0; i < len(hashes); i++ {
@@ -184,6 +185,7 @@ func (s *DBStore) Delete(ctx context.Context, hashes []interface{}) error {
 	_, err := db.ExecContext(ctx, query, values...)
 
 	if err != nil {
+		log.Error("Delete", "err", err)
 		log.Error("Delete", "query", query, "values", values)
 		return err
 	}

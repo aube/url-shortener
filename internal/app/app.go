@@ -26,7 +26,7 @@ type StorageSetMultiple interface {
 	SetMultiple(ctx context.Context, l map[string]string) error
 }
 type StorageDelete interface {
-	Delete(ctx context.Context, l []interface{}) error
+	Delete(ctx context.Context, l []string) error
 }
 
 type Storage interface {
