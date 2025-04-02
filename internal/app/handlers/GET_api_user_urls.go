@@ -21,10 +21,7 @@ func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
 		log := logger.WithContext(ctx)
 		w.Header().Set("Content-Type", "application/json")
 
-		// userID := r.Context().Value(ctxkeys.UserIDKey)
-		// ctx := context.WithValue(ctx, ctxkeys.UserIDKey, userID)
-
-		memData, err := store.List(r.Context())
+		memData, err := store.List(ctx)
 
 		var herr *appErrors.HTTPError
 		if errors.As(err, &herr) {

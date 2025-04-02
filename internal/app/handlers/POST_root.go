@@ -58,8 +58,6 @@ func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
 		var herr *appErrors.HTTPError
 		if errors.As(err, &herr) {
 			httpStatus = herr.Code
-			// w.WriteHeader(httpStatus)
-			// return
 		}
 
 		w.WriteHeader(httpStatus)

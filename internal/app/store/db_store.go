@@ -63,9 +63,7 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
-	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
-	// ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	_, err := db.ExecContext(ctx, postgre.insertURLWithUser, key, value, userID)
@@ -140,9 +138,7 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
-	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
-	// ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	tx, err := db.Begin()
@@ -157,7 +153,7 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 
 		if err != nil {
 			log.Error("SetMultiple", "err", err)
-			// если ошибка, то откатываем
+			// если ошибка, то откатываем транзакцию
 			tx.Rollback()
 			return err
 		}
@@ -182,11 +178,7 @@ func (s *DBStore) Delete(ctx context.Context, hashes []interface{}) error {
 	r := strings.NewReplacer("$$$", strings.Join(valuesKeys, ","))
 	query := r.Replace(postgre.setDeletedRows)
 
-	// userID := ctx.Value(ctxkeys.UserIDKey).(string)
-
-	// сделал context.Background(), т.к. после добавления auth middleware появилась ошибка "context deadline exceeded"
-	// ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	_, err := db.ExecContext(ctx, query, values...)

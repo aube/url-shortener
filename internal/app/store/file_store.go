@@ -79,8 +79,6 @@ func (s *FileStore) Delete(ctx context.Context, hashes []interface{}) error {
 	for _, v := range hashes {
 		log.Info("Del hash:", v)
 		s.s[v.(string)] = ""
-
-		//TODO: rename WriteToFile > AddToFile and add func RewriteFile
 	}
 	return nil
 }

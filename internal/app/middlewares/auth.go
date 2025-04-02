@@ -15,7 +15,7 @@ import (
 )
 
 const authCookieName = "auth"
-const bearerString = "Bearer "
+const bearerString = "Bearer " // The token should be in the format "Bearer <token>"
 
 type Claims struct {
 	UserID string `json:"id"`
@@ -37,8 +37,6 @@ func randUserID() string {
 
 func getToken() string {
 	var user User
-	// user.Username = "admin"
-	// user.Password = "password"
 	user.ID = randUserID()
 
 	// Create the JWT claims
@@ -66,7 +64,6 @@ func getToken() string {
 		log.Error("getToken", "token", token)
 		log.Error("getToken", "tokenString", tokenString)
 		log.Error("getToken", "claims", claims)
-		// http.Error(w, "Error generating token", http.StatusInternalServerError)
 		return ""
 	}
 	return tokenString
@@ -115,7 +112,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		if authHeader != "" {
-			// The token should be in the format "Bearer <token>"
 			tokenString = authHeader[len(bearerString):]
 		}
 

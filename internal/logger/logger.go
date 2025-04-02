@@ -14,7 +14,6 @@ var (
 	initOnce     sync.Once
 )
 
-// Config holds logger configuration
 type Config struct {
 	Level     slog.Level
 	Output    io.Writer
@@ -25,11 +24,6 @@ type Config struct {
 // Init initializes the global logger (thread-safe)
 func Init(cfg Config) {
 	initOnce.Do(func() {
-		// opts := &slog.HandlerOptions{
-		// 	Level:     cfg.Level,
-		// 	AddSource: cfg.AddSource,
-		// }
-
 		opts := &slog.HandlerOptions{
 			Level:     cfg.Level,
 			AddSource: cfg.AddSource,
@@ -55,17 +49,6 @@ func Init(cfg Config) {
 		globalLogger = slog.New(handler)
 	})
 }
-
-/* func caller() slog.Attr {
-	_, file, line, _ := runtime.Caller(2)
-	return slog.String("caller", file+":"+strconv.Itoa(line))
-}
-
-log.Info("starting processing",
-	"input", input,
-	logger.caller(),
-)
-*/
 
 // Get returns the global logger instance
 func Get() *slog.Logger {
