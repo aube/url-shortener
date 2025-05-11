@@ -14,8 +14,10 @@ type StorageSet interface {
 	Set(c context.Context, key string, value string) error
 }
 
-func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
+func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		log := logger.WithContext(ctx)
 
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)
@@ -36,7 +38,8 @@ func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.Hand
 		w.Header().Set("Content-Type", "application/json")
 		httpStatus := http.StatusCreated
 
-		err = store.Set(ctx, hash, string(originalURL))
+		err = store.Set(r.Context(), hash, string(originalURL))
+
 		if err != nil {
 			httpStatus = http.StatusConflict
 		}
@@ -45,6 +48,6 @@ func HandlerAPI(ctx context.Context, store StorageSet, baseURL string) http.Hand
 		shortURL := baseURL + "/" + hash
 		fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
 
-		logger.Println("URL:", shortURL, httpStatus)
+		log.Debug("URL:", shortURL, httpStatus)
 	}
 }

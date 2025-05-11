@@ -1,18 +1,22 @@
 package handlers
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.HandlerFunc {
+func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		log := logger.WithContext(ctx)
+
 		if r.Body == nil || r.ContentLength == 0 {
 			http.Error(w, "Request body is empty", http.StatusBadRequest)
 			return
@@ -34,7 +38,8 @@ func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.Han
 
 		responseContentJSON := contentTypeJSON || acceptHeaderJSON
 
-		logger.Println(
+		log.Debug(
+			"HandlerRoot",
 			"Request contentType:", contentType,
 			"Response contentType:", responseContentType,
 		)
@@ -48,10 +53,13 @@ func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.Han
 		hash := hasher.CalcHash(originalURL)
 		httpStatus := http.StatusCreated
 
-		err = store.Set(ctx, hash, string(originalURL))
-		if err != nil {
-			httpStatus = http.StatusConflict
+		err = store.Set(r.Context(), hash, string(originalURL))
+
+		var herr *appErrors.HTTPError
+		if errors.As(err, &herr) {
+			httpStatus = herr.Code
 		}
+
 		w.WriteHeader(httpStatus)
 
 		shortURL := baseURL + "/" + hash
@@ -61,6 +69,6 @@ func HandlerRoot(ctx context.Context, store StorageSet, baseURL string) http.Han
 			fmt.Fprintf(w, "%s", shortURL)
 		}
 
-		logger.Println("URL:", shortURL, httpStatus)
+		log.Debug("URL:", shortURL, httpStatus)
 	}
 }

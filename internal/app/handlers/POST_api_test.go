@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,35 +10,31 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+type HTTPError struct {
+	Code int
+	Err  error
+}
+
+func (he *HTTPError) Error() string {
+	return fmt.Sprintf("%d - %s", he.Code, he.Err)
+}
+
 type MockMemoryStore struct {
 	s map[string]string
 }
 
-/* func (m *MockMemoryStore) Get(s string) (string, bool) {
-	return s, true
-} */
-
 func (m *MockMemoryStore) Set(c context.Context, k string, v string) error {
 	if v == "conflict" {
-		return errors.New("")
+		return apperrors.NewHTTPError(409, "conflict")
 	}
 	return nil
 }
-
-/*
-	 func (m *MockMemoryStore) List() map[string]string {
-		return nil
-	}
-
-	func (m *MockMemoryStore) Ping() error {
-		return nil
-	}
-*/
 
 func TestHandlerAPI(t *testing.T) {
 	baseURL := "http://localhost:8080"
@@ -88,13 +84,21 @@ func TestHandlerAPI(t *testing.T) {
 		},
 	}
 
+	cookie := &http.Cookie{
+		Name:     "auth",
+		Value:    "111",
+		Expires:  time.Now().Add(24 * time.Hour), // Cookie expires in 24 hours
+		Path:     "/",                            // Cookie is accessible across the entire site
+		HttpOnly: true,                           // Cookie is not accessible via JavaScript
+		Secure:   false,                          // Set to true if using HTTPS
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
+			r.AddCookie(cookie)
 			w := httptest.NewRecorder()
-			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-			defer cancel()
-			h := HandlerRoot(ctx, MemoryStore, baseURL)
+			h := HandlerRoot(MemoryStore, baseURL)
 			h(w, r)
 
 			result := w.Result()

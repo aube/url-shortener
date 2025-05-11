@@ -6,10 +6,14 @@ import (
 	"embed"
 	"errors"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
+	"github.com/aube/url-shortener/internal/app/ctxkeys"
 	"github.com/aube/url-shortener/internal/logger"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -25,62 +29,115 @@ type DBStorage interface {
 	StoragePing
 	StorageSet
 	StorageSetMultiple
+	StorageDelete
 }
 type DBStore struct{}
 
 var db *sql.DB
 
 func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
+	log := logger.WithContext(ctx)
+
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	row := db.QueryRowContext(ctx, postgre.selectURL, key)
 	var originalURL string
-	err := row.Scan(&originalURL)
+	var deleted bool
+
+	err := row.Scan(&originalURL, &deleted)
 
 	if err != nil {
-		logger.Println("SQL error", err)
+		log.Error("Get", "err", err)
+		return "", false
+	}
+	if deleted {
+		return "", true
 	}
 
-	return originalURL, err == nil
+	return originalURL, true
 }
 
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
+	log := logger.WithContext(ctx)
+
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
+
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, postgre.insertURL, key, value)
+	_, err := db.ExecContext(ctx, postgre.insertURLWithUser, key, value, userID)
 
 	if err != nil {
 		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			err = ErrConflict
+			err = appErrors.NewHTTPError(409, "conflict")
 		}
-		logger.Println("SQL error", err)
+		log.Error("Set", "err", err)
 	}
 
 	return err
 }
 
-func (s *DBStore) List(ctx context.Context) map[string]string {
+func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
+	log := logger.WithContext(ctx)
+
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
+
+	if userID == "" {
+		return nil, appErrors.NewHTTPError(401, "user unauthorised")
+	}
+	log.Warn("List", "userID", userID)
+
+	rows, err := db.QueryContext(ctx, postgre.selectURLsByUserID, userID)
+	if err != nil {
+		log.Error("List", "err", err)
+		return nil, err
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Error("List", "rows.Err", err)
+		panic(err)
+	}
+
 	m := make(map[string]string)
-	return m
+
+	// пробегаем по всем записям
+	for rows.Next() {
+		var hash string
+		var URL string
+		err = rows.Scan(&hash, &URL)
+		if err != nil {
+			log.Error("List", "err", err)
+			return nil, err
+		}
+		m[hash] = URL
+	}
+
+	return m, nil
 }
 
-func (s *DBStore) Ping() error {
+func (s *DBStore) Ping(ctx context.Context) error {
+	log := logger.WithContext(ctx)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	logger.Println("DB", reflect.TypeOf(db))
+	log.Debug("Ping", "db", reflect.TypeOf(db))
 
 	if err := db.PingContext(ctx); err != nil {
+		log.Error("Ping", "err", err)
 		return err
 	}
 	return nil
 }
 
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
+	log := logger.WithContext(ctx)
+
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
+
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -88,19 +145,57 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	if err != nil {
 		return err
 	}
+	log.Info("SetMultiple", "userID", userID)
+
 	for k, v := range items {
-		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v)
+
+		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v, userID)
 
 		if err != nil {
-			// если ошибка, то откатываем
+			log.Error("SetMultiple", "err", err)
+			// если ошибка, то откатываем транзакцию
 			tx.Rollback()
 			return err
 		}
 	}
+
 	return tx.Commit()
 }
 
+func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
+	log := logger.WithContext(ctx)
+
+	values := make([]interface{}, len(hashes)+1) // array of query values
+	valuesKeys := make([]string, len(hashes))    // "$2,$3...$n"
+
+	// first value in query sets for: user_id=$1
+	values[0] = ctx.Value(ctxkeys.UserIDKey).(string)
+
+	for i := 0; i < len(hashes); i++ {
+		values[i+1] = hashes[i]
+		valuesKeys[i] = "$" + strconv.Itoa(i+2)
+	}
+
+	r := strings.NewReplacer("$$$", strings.Join(valuesKeys, ","))
+	query := r.Replace(postgre.setDeletedRows)
+
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, query, values...)
+
+	if err != nil {
+		log.Error("Delete", "err", err)
+		log.Error("Delete", "query", query, "values", values)
+		return err
+	}
+
+	return nil
+}
+
 func NewDBStore(dsn string) DBStorage {
+	log := logger.Get()
+
 	var err error
 	db, err = sql.Open("pgx", dsn)
 
@@ -122,7 +217,7 @@ func NewDBStore(dsn string) DBStorage {
 		panic(err)
 	}
 
-	logger.Println("DB connection success:", dsn)
+	log.Debug("NewDBStore", "dsn", dsn)
 
 	return &DBStore{}
 }

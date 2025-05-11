@@ -5,18 +5,20 @@ import (
 	"log"
 	"strings"
 
-	"github.com/aube/url-shortener/internal/logger"
 	"github.com/caarlos0/env/v6"
 )
 
 type EnvConfig struct {
-	BaseURL         string `env:"BASE_URL"`
-	ServerAddress   string `env:"SERVER_ADDRESS"`
-	ServerHost      string
-	ServerPort      string
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	FileStorageDir  string `env:"FILE_STORAGE_DIR"`
-	DatabaseDSN     string `env:"DATABASE_DSN"`
+	BaseURL               string `env:"BASE_URL"`
+	ServerAddress         string `env:"SERVER_ADDRESS"`
+	ServerHost            string
+	ServerPort            string
+	FileStoragePath       string `env:"FILE_STORAGE_PATH"`
+	FileStorageDir        string `env:"FILE_STORAGE_DIR"`
+	DatabaseDSN           string `env:"DATABASE_DSN"`
+	TokenSecretString     string `env:"DATABASE_DSN ^_^ "`
+	TokenSecret           []byte
+	DefaultRequestTimeout int `env:"DEFAULT_REQUEST_TIMEOUT"`
 }
 
 var config EnvConfig
@@ -72,12 +74,13 @@ func NewConfig() EnvConfig {
 		config.DatabaseDSN = flagDatabaseDSN
 	}
 
+	if config.DefaultRequestTimeout < 1 {
+		config.DefaultRequestTimeout = 5
+	}
+
 	config.ServerHost = strings.Split(config.ServerAddress, ":")[0]
 	config.ServerPort = strings.Split(config.ServerAddress, ":")[1]
-
-	logger.Println("serverAddress: " + config.ServerAddress)
-	logger.Println("serverHost: " + config.ServerHost)
-	logger.Println("serverPort: " + config.ServerPort)
+	config.TokenSecret = []byte(config.TokenSecretString)
 
 	initialized = true
 

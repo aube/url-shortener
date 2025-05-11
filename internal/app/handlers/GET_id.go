@@ -11,8 +11,11 @@ type StorageGet interface {
 	Get(c context.Context, key string) (value string, ok bool)
 }
 
-func HandlerID(ctx context.Context, store StorageGet) http.HandlerFunc {
+func HandlerID(store StorageGet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		log := logger.WithContext(ctx)
+
 		id := r.PathValue("id")
 
 		if id == "" {
@@ -20,15 +23,19 @@ func HandlerID(ctx context.Context, store StorageGet) http.HandlerFunc {
 			return
 		}
 
-		logger.Println("Requested ID:", id)
+		log.Debug("HandlerID", "id", id)
 
 		url, ok := store.Get(ctx, id)
-		if url == "" || !ok {
+		if !ok {
 			http.Error(w, "URL not found", http.StatusBadRequest)
 			return
 		}
+		if url == "" && ok {
+			http.Error(w, "URL deleted", http.StatusGone)
+			return
+		}
 
-		logger.Println("URL:", url)
+		log.Debug("HandlerID", "url", url)
 
 		w.Header().Set("Location", url)
 		w.WriteHeader(http.StatusTemporaryRedirect)

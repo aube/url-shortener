@@ -14,16 +14,19 @@ type StorageGet interface {
 	Get(ctx context.Context, key string) (value string, ok bool)
 }
 type StorageList interface {
-	List(ctx context.Context) map[string]string
+	List(ctx context.Context) (map[string]string, error)
 }
 type StoragePing interface {
-	Ping() error
+	Ping(ctx context.Context) error
 }
 type StorageSet interface {
 	Set(ctx context.Context, key string, value string) error
 }
 type StorageSetMultiple interface {
 	SetMultiple(ctx context.Context, l map[string]string) error
+}
+type StorageDelete interface {
+	Delete(ctx context.Context, l []string) error
 }
 
 type Storage interface {
@@ -32,26 +35,50 @@ type Storage interface {
 	StoragePing
 	StorageSet
 	StorageSetMultiple
+	StorageDelete
 }
 
-func Connect(ctx context.Context, storage Storage) chi.Router {
+func Connect(storage Storage) chi.Router {
 	config := config.NewConfig()
 	r := chi.NewRouter()
 
 	r.Group(func(r chi.Router) {
 		r.Use(
+			middlewares.TimeoutMiddleware,
+			middlewares.AuthMiddleware,
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)
-		r.Get("/{id}", handlers.HandlerID(ctx, storage))
-		r.Post("/*", handlers.HandlerRoot(ctx, storage, config.BaseURL))
-		r.Post("/api/*", handlers.HandlerAPI(ctx, storage, config.BaseURL))
-		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(ctx, storage, config.BaseURL))
+		r.Get("/{id}", handlers.HandlerID(storage))
+		r.Post("/*", handlers.HandlerRoot(storage, config.BaseURL))
+		r.Post("/api/*", handlers.HandlerAPI(storage, config.BaseURL))
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(middlewares.LoggingMiddleware)
-		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(ctx, storage, config.BaseURL))
+		r.Use(
+			middlewares.TimeoutMiddleware,
+			middlewares.AuthMiddleware,
+			middlewares.LoggingMiddleware,
+		)
+		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(storage, config.BaseURL))
+		r.Delete("/api/user/urls", handlers.HandlerAPIUserUrlsDel(storage, config.BaseURL))
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(
+			middlewares.TimeoutMiddleware,
+			middlewares.AuthMiddleware,
+			middlewares.LoggingMiddleware,
+			middlewares.GzipMiddleware,
+		)
+		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(storage, config.BaseURL))
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(
+			middlewares.TimeoutMiddleware,
+			middlewares.LoggingMiddleware,
+		)
 		r.Get("/ping", handlers.HandlerPing(storage))
 	})
 

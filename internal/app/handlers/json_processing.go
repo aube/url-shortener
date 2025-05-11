@@ -11,11 +11,13 @@ type URLJson struct {
 }
 
 func readURLFromJSON(body []byte) []byte {
+	log := logger.Get()
+
 	var jsonBody URLJson
 
 	err := json.Unmarshal(body, &jsonBody)
 	if err != nil {
-		logger.Println("Error unmarshaling JSON:", err)
+		log.Debug("readURLFromJSON", "err", err)
 		return nil
 	}
 	return []byte(jsonBody.URL)

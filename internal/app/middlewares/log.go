@@ -49,9 +49,8 @@ func (r *loggingResponseWriter) String() {
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log := logger.Get()
 
-		// func LoggingMiddleware(h http.HandlerFunc) http.HandlerFunc {
-		//     return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		responseData := &responseData{
@@ -66,7 +65,8 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		logger.Infoln(
+		log.Info(
+			"LoggingMiddleware",
 			"status", responseData.status, // получаем перехваченный код статуса ответа
 			"method", r.Method,
 			"URI", r.RequestURI,
