@@ -23,14 +23,6 @@ import (
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
-type DBStorage interface {
-	StorageGet
-	StorageList
-	StoragePing
-	StorageSet
-	StorageSetMultiple
-	StorageDelete
-}
 type DBStore struct{}
 
 var db *sql.DB
@@ -193,7 +185,7 @@ func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
 	return nil
 }
 
-func NewDBStore(dsn string) DBStorage {
+func NewDBStore(dsn string) Storage {
 	log := logger.Get()
 
 	var err error

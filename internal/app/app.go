@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"log"
 	"net/http"
 
@@ -10,54 +9,17 @@ import (
 	"github.com/aube/url-shortener/internal/app/store"
 )
 
-type StorageGet interface {
-	Get(ctx context.Context, key string) (value string, ok bool)
-}
-type StorageList interface {
-	List(ctx context.Context) (map[string]string, error)
-}
-type StoragePing interface {
-	Ping(ctx context.Context) error
-}
-type StorageSet interface {
-	Set(ctx context.Context, key string, value string) error
-}
-type StorageSetMultiple interface {
-	SetMultiple(ctx context.Context, l map[string]string) error
-}
-type StorageDelete interface {
-	Delete(ctx context.Context, l []string) error
-}
-
-type Storage interface {
-	StorageGet
-	StorageList
-	StoragePing
-	StorageSet
-	StorageSetMultiple
-	StorageDelete
-}
-
 func Run() error {
 
 	config := config.NewConfig()
 
-	var storage Storage
-
-	if config.DatabaseDSN != "" {
-		storage = store.NewDBStore(config.DatabaseDSN)
-	} else if config.FileStoragePath != "" {
-		storage = store.NewFileStore(config.FileStoragePath)
-	} else {
-		storage = store.NewMemStore()
-	}
-
-	router := router.Connect(storage)
+	storage := store.MewStore()
+	r := router.New(storage, config.BaseURL)
 
 	address := config.ServerHost + ":" + config.ServerPort
 	log.Println("Server starting", "address", address)
 
-	err := http.ListenAndServe(address, router)
+	err := http.ListenAndServe(address, r)
 
 	if err != nil {
 		log.Fatal("Starting server", "err", err)

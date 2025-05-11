@@ -12,15 +12,6 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-type FileStorage interface {
-	StorageGet
-	StorageList
-	StoragePing
-	StorageSet
-	StorageSetMultiple
-	StorageDelete
-}
-
 type FileStore struct {
 	s          map[string]string
 	pathToFile string
@@ -158,7 +149,7 @@ func getFileContent(storagePath string) map[string]string {
 	return data
 }
 
-func NewFileStore(storagePath string) FileStorage {
+func NewFileStore(storagePath string) Storage {
 	createDir(storagePath)
 	createFile(storagePath)
 	data := getFileContent(storagePath)
