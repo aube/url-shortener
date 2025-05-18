@@ -1,13 +1,16 @@
 #!/bin/bash
 
-# if [ ]
-
 if [ -z $1 ]; then
-    BRANCH=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
-    ITERATION=${BRANCH: -1}
+    ITERATION=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p' | tr -d -c 0-9)
 else
     ITERATION=$1
 fi
+
+cd cmd/shortener
+
+go build -o shortener *.go
+
+cd -
 
 ./shortenertest \
  -test.v \

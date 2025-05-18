@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/aube/url-shortener/internal/app/config"
 	"github.com/aube/url-shortener/internal/app/handlers"
 	"github.com/aube/url-shortener/internal/app/middlewares"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type StorageGet interface {
@@ -38,9 +38,10 @@ type Storage interface {
 	StorageDelete
 }
 
-func Connect(storage Storage) chi.Router {
-	config := config.NewConfig()
+func New(storage Storage, BaseURL string) chi.Router {
 	r := chi.NewRouter()
+
+	r.Mount("/debug", middleware.Profiler())
 
 	r.Group(func(r chi.Router) {
 		r.Use(
@@ -50,8 +51,8 @@ func Connect(storage Storage) chi.Router {
 			middlewares.GzipMiddleware,
 		)
 		r.Get("/{id}", handlers.HandlerID(storage))
-		r.Post("/*", handlers.HandlerRoot(storage, config.BaseURL))
-		r.Post("/api/*", handlers.HandlerAPI(storage, config.BaseURL))
+		r.Post("/*", handlers.HandlerRoot(storage, BaseURL))
+		r.Post("/api/*", handlers.HandlerAPI(storage, BaseURL))
 	})
 
 	r.Group(func(r chi.Router) {
@@ -60,8 +61,8 @@ func Connect(storage Storage) chi.Router {
 			middlewares.AuthMiddleware,
 			middlewares.LoggingMiddleware,
 		)
-		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(storage, config.BaseURL))
-		r.Delete("/api/user/urls", handlers.HandlerAPIUserUrlsDel(storage, config.BaseURL))
+		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(storage, BaseURL))
+		r.Delete("/api/user/urls", handlers.HandlerAPIUserUrlsDel(storage, BaseURL))
 	})
 
 	r.Group(func(r chi.Router) {
@@ -71,7 +72,7 @@ func Connect(storage Storage) chi.Router {
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)
-		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(storage, config.BaseURL))
+		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(storage, BaseURL))
 	})
 
 	r.Group(func(r chi.Router) {
