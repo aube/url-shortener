@@ -20,7 +20,7 @@ profdiff:
 
 .PHONY: mocks
 mocks:
-	mockgen -source=./internal/api/interfaces.go -destination=./mocks/api/mocks.go
+	mockgen -source=./internal/app/store/interfaces.go -destination=./mocks/mocks.go
 
 .PHONY: test
 test:

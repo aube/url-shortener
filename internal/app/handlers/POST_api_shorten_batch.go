@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -56,8 +55,7 @@ func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerF
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-
-		fmt.Fprintf(w, `%s`, JSON2Batch(outputBatch))
+		w.Write(JSON2Batch(outputBatch))
 	}
 }
 

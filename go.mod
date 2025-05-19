@@ -6,13 +6,14 @@ toolchain go1.23.5
 
 require (
 	github.com/caarlos0/env/v6 v6.10.1
-	github.com/go-chi/chi v1.5.5
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.7.2
+	github.com/pashagolub/pgxmock/v2 v2.12.0
 	github.com/pressly/goose/v3 v3.24.1
 	github.com/stretchr/testify v1.10.0
+	go.uber.org/mock v0.5.2
 )
 
 require (
