@@ -14,6 +14,17 @@ type StorageSetMultiple interface {
 	SetMultiple(context.Context, map[string]string) error
 }
 
+// HandlerShortenBatch create multiple short URLs
+// @Summary Shorten multiple URLs
+// @Description Creates short URLs for multiple provided original URLs
+// @Tags URLs
+// @Accept json
+// @Produce json
+// @Param request body []handlers.inputBatchJSONItem true "Batch of URLs to shorten"
+// @Success 201 {array} handlers.outputBatchJSONItem
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/shorten/batch [post]
 func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

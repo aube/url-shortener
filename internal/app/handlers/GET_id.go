@@ -11,6 +11,15 @@ type StorageGet interface {
 	Get(c context.Context, key string) (value string, ok bool)
 }
 
+// HandlerID read URL for a user by ID
+// @Summary Redirect to original URL
+// @Description Redirects to the original URL corresponding to the short URL hash
+// @Tags URLs
+// @Param id path string true "Short URL hash"
+// @Success 307 "Temporary redirect"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 410 {object} map[string]string "URL deleted"
+// @Router /{id} [get]
 func HandlerID(store StorageGet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
