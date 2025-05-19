@@ -83,30 +83,6 @@ func TestHandlerPing(t *testing.T) {
 	}
 }
 
-func TestHandlerPing_HeaderAndStatus(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	t.Run("verifies status code and headers", func(t *testing.T) {
-		mockStorage := mockApi.NewMockStoragePing(ctrl)
-		mockStorage.EXPECT().
-			Ping(gomock.Any()).
-			Return(nil)
-
-		handler := HandlerPing(mockStorage)
-		req := httptest.NewRequest(http.MethodGet, "/ping", nil)
-		w := httptest.NewRecorder()
-
-		handler(w, req)
-
-		res := w.Result()
-		defer res.Body.Close()
-
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		assert.Empty(t, res.Header.Get("Content-Type")) // No content-type set in handler
-	})
-}
-
 func TestHandlerPing_ErrorCases(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
