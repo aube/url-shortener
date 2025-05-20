@@ -14,6 +14,7 @@ import (
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/app/ctxkeys"
+	"github.com/aube/url-shortener/internal/app/workerpool"
 	"github.com/aube/url-shortener/internal/logger"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -24,7 +25,9 @@ import (
 var embedMigrations embed.FS
 
 // DBStore is a PostgreSQL implementation of the Storage interface.
-type DBStore struct{}
+type DBStore struct {
+	dispatcher *workerpool.WorkDispatcher
+}
 
 var db *sql.DB
 
@@ -166,15 +169,39 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 // Delete marks one or more URLs as deleted in the database.
 // Only URLs belonging to the current user are affected.
 func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
+
+	for _, hash := range hashes {
+		s.dispatcher.AddWork(ctx, hash, userID)
+	}
+
+	// s.delMultiple(ctx, hashes, userID)
+
+	return nil
+}
+
+func (s *DBStore) delByRow(ctx context.Context, hash string, userID string) error {
 	log := logger.WithContext(ctx)
 
-	values := make([]interface{}, len(hashes)+1) // array of query values
-	valuesKeys := make([]string, len(hashes))    // "$2,$3...$n"
+	_, err := db.Exec(postgre.setDeleteOnceRow, userID, hash)
+
+	if err != nil {
+		log.Error("Delete", "query", postgre.setDeleteOnceRow, "userID", userID, "hash", hash)
+		log.Error("Delete", "err", err)
+		return err
+	}
+	return nil
+}
+
+func (s *DBStore) delMultiple(ctx context.Context, hashes []string, userID string) error {
+	log := logger.WithContext(ctx)
+	values := make([]any, len(hashes)+1)      // array of query values
+	valuesKeys := make([]string, len(hashes)) // "$2,$3...$n"
 
 	// first value in query sets for: user_id=$1
-	values[0] = ctx.Value(ctxkeys.UserIDKey).(string)
+	values[0] = userID
 
-	for i := 0; i < len(hashes); i++ {
+	for i := range len(hashes) {
 		values[i+1] = hashes[i]
 		valuesKeys[i] = "$" + strconv.Itoa(i+2)
 	}
@@ -188,11 +215,10 @@ func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
 	_, err := db.ExecContext(ctx, query, values...)
 
 	if err != nil {
-		log.Error("Delete", "err", err)
 		log.Error("Delete", "query", query, "values", values)
+		log.Error("Delete", "err", err)
 		return err
 	}
-
 	return nil
 }
 
@@ -227,5 +253,18 @@ func NewDBStore(dsn string) Storage {
 
 	log.Debug("NewDBStore", "dsn", dsn)
 
-	return &DBStore{}
+	store := &DBStore{}
+	store.initWorkerPool()
+
+	return store
+}
+
+func (s *DBStore) initWorkerPool() {
+
+	s.dispatcher = workerpool.New(3, s.delByRow)
+	// defer dispatcher.Close()
+
+	// for _, id := range orders {
+	// 	dispatcher.AddWork(id)
+	// }
 }
