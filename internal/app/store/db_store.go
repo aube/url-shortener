@@ -23,10 +23,13 @@ import (
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
+// DBStore is a PostgreSQL implementation of the Storage interface.
 type DBStore struct{}
 
 var db *sql.DB
 
+// Get retrieves a URL by its shortened key from the database.
+// Returns the URL and true if found (even if deleted), empty string and false otherwise.
 func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	log := logger.WithContext(ctx)
 
@@ -50,6 +53,8 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	return originalURL, true
 }
 
+// Set stores a new URL mapping in the database.
+// Returns an error if the operation fails, including a conflict error if the key exists.
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 	log := logger.WithContext(ctx)
 
@@ -61,7 +66,7 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 	_, err := db.ExecContext(ctx, postgre.insertURLWithUser, key, value, userID)
 
 	if err != nil {
-		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
+		// Check if error is a integrity constraint violation
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 			err = appErrors.NewHTTPError(409, "conflict")
@@ -72,6 +77,8 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 	return err
 }
 
+// List returns all URL mappings for the current user from the database.
+// Returns an unauthorized error if no user ID is present in context.
 func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 	log := logger.WithContext(ctx)
 
@@ -95,7 +102,7 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 
 	m := make(map[string]string)
 
-	// пробегаем по всем записям
+	// Iterate through all records
 	for rows.Next() {
 		var hash string
 		var URL string
@@ -110,6 +117,7 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 	return m, nil
 }
 
+// Ping checks if the database connection is alive.
 func (s *DBStore) Ping(ctx context.Context) error {
 	log := logger.WithContext(ctx)
 
@@ -125,6 +133,8 @@ func (s *DBStore) Ping(ctx context.Context) error {
 	return nil
 }
 
+// SetMultiple stores multiple URL mappings in a single transaction.
+// If any operation fails, the entire transaction is rolled back.
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
 	log := logger.WithContext(ctx)
 
@@ -140,12 +150,11 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	log.Info("SetMultiple", "userID", userID)
 
 	for k, v := range items {
-
 		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v, userID)
 
 		if err != nil {
 			log.Error("SetMultiple", "err", err)
-			// если ошибка, то откатываем транзакцию
+			// Rollback transaction on error
 			tx.Rollback()
 			return err
 		}
@@ -154,6 +163,8 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	return tx.Commit()
 }
 
+// Delete marks one or more URLs as deleted in the database.
+// Only URLs belonging to the current user are affected.
 func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
 	log := logger.WithContext(ctx)
 
@@ -185,6 +196,9 @@ func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
 	return nil
 }
 
+// NewDBStore creates and initializes a new PostgreSQL storage instance.
+// It establishes a database connection, sets connection pool parameters,
+// and runs any pending migrations using Goose.
 func NewDBStore(dsn string) Storage {
 	log := logger.Get()
 
@@ -195,10 +209,12 @@ func NewDBStore(dsn string) Storage {
 		panic(err)
 	}
 
+	// Set connection pool parameters
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
 
+	// Configure Goose migrations
 	goose.SetBaseFS(embedMigrations)
 
 	if err := goose.SetDialect("postgres"); err != nil {

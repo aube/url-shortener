@@ -8,6 +8,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// StoragePing interface
 type StoragePing interface {
 	Ping(ctx context.Context) error
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// StorageList interface
 type StorageList interface {
 	List(c context.Context) (map[string]string, error)
 }
@@ -57,6 +58,7 @@ func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
 	}
 }
 
+// JSONItem struct
 type JSONItem struct {
 	Hash string `json:"short_url"`
 	URL  string `json:"original_url"`

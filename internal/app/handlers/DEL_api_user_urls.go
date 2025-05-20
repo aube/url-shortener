@@ -12,6 +12,7 @@ import (
 
 const numWorkers int = 10
 
+// StorageDelete interface
 type StorageDelete interface {
 	Delete(c context.Context, l []string) error
 }

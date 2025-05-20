@@ -10,6 +10,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// StorageSet interface
 type StorageSet interface {
 	Set(c context.Context, key string, value string) error
 }

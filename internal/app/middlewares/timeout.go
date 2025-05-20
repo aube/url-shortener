@@ -8,6 +8,8 @@ import (
 	"github.com/aube/url-shortener/internal/app/config"
 )
 
+// TimeoutMiddleware adds a timeout to the request context.
+// The timeout duration is configurable via DefaultRequestTimeout in the config.
 func TimeoutMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t := config.NewConfig().DefaultRequestTimeout

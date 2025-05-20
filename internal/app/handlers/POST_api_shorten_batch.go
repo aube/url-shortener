@@ -10,6 +10,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// StorageSetMultiple interface
 type StorageSetMultiple interface {
 	SetMultiple(context.Context, map[string]string) error
 }
@@ -93,6 +94,7 @@ type outputBatchJSONItem struct {
 	SHORT string `json:"short_url"`
 }
 
+// JSON2Batch json.Marshal
 func JSON2Batch(outputJSON []outputBatchJSONItem) []byte {
 	log := logger.Get()
 	jsonBytes, err := json.Marshal(outputJSON)

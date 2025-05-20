@@ -7,6 +7,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// StorageGet interface
 type StorageGet interface {
 	Get(c context.Context, key string) (value string, ok bool)
 }
