@@ -6,6 +6,7 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// URLJson JSON struct
 type URLJson struct {
 	URL string `json:"URL"`
 }

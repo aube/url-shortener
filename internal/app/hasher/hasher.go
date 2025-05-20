@@ -5,10 +5,8 @@ import (
 	"fmt"
 )
 
+// CalcHash calculates a SHA-1 hash of the input data and returns a substring
 func CalcHash(body []byte) string {
-	// TODO:
-	// var hash uint32 = crc32.ChecksumIEEE([]byte(data))
-
 	hasher := sha1.New()
 	hasher.Write(body)
 	hashBytes := hasher.Sum(nil)

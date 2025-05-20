@@ -14,6 +14,7 @@ import (
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/app/ctxkeys"
+	"github.com/aube/url-shortener/internal/app/workerpool"
 	"github.com/aube/url-shortener/internal/logger"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -23,18 +24,15 @@ import (
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
-type DBStorage interface {
-	StorageGet
-	StorageList
-	StoragePing
-	StorageSet
-	StorageSetMultiple
-	StorageDelete
+// DBStore is a PostgreSQL implementation of the Storage interface.
+type DBStore struct {
+	dispatcher *workerpool.WorkDispatcher
 }
-type DBStore struct{}
 
 var db *sql.DB
 
+// Get retrieves a URL by its shortened key from the database.
+// Returns the URL and true if found (even if deleted), empty string and false otherwise.
 func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	log := logger.WithContext(ctx)
 
@@ -58,6 +56,8 @@ func (s *DBStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	return originalURL, true
 }
 
+// Set stores a new URL mapping in the database.
+// Returns an error if the operation fails, including a conflict error if the key exists.
 func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 	log := logger.WithContext(ctx)
 
@@ -69,7 +69,7 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 	_, err := db.ExecContext(ctx, postgre.insertURLWithUser, key, value, userID)
 
 	if err != nil {
-		// проверяем, что ошибка сигнализирует о потенциальном нарушении целостности данных
+		// Check if error is a integrity constraint violation
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 			err = appErrors.NewHTTPError(409, "conflict")
@@ -80,6 +80,8 @@ func (s *DBStore) Set(ctx context.Context, key string, value string) error {
 	return err
 }
 
+// List returns all URL mappings for the current user from the database.
+// Returns an unauthorized error if no user ID is present in context.
 func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 	log := logger.WithContext(ctx)
 
@@ -103,7 +105,7 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 
 	m := make(map[string]string)
 
-	// пробегаем по всем записям
+	// Iterate through all records
 	for rows.Next() {
 		var hash string
 		var URL string
@@ -118,6 +120,7 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 	return m, nil
 }
 
+// Ping checks if the database connection is alive.
 func (s *DBStore) Ping(ctx context.Context) error {
 	log := logger.WithContext(ctx)
 
@@ -133,6 +136,8 @@ func (s *DBStore) Ping(ctx context.Context) error {
 	return nil
 }
 
+// SetMultiple stores multiple URL mappings in a single transaction.
+// If any operation fails, the entire transaction is rolled back.
 func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) error {
 	log := logger.WithContext(ctx)
 
@@ -148,12 +153,11 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	log.Info("SetMultiple", "userID", userID)
 
 	for k, v := range items {
-
 		_, err := tx.ExecContext(ctx, postgre.insertURLIgnoreConflicts, k, v, userID)
 
 		if err != nil {
 			log.Error("SetMultiple", "err", err)
-			// если ошибка, то откатываем транзакцию
+			// Rollback transaction on error
 			tx.Rollback()
 			return err
 		}
@@ -162,16 +166,42 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 	return tx.Commit()
 }
 
+// Delete marks one or more URLs as deleted in the database.
+// Only URLs belonging to the current user are affected.
 func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
+
+	for _, hash := range hashes {
+		s.dispatcher.AddWork(ctx, hash, userID)
+	}
+
+	// s.delMultiple(ctx, hashes, userID)
+
+	return nil
+}
+
+func (s *DBStore) delByRow(ctx context.Context, hash string, userID string) error {
 	log := logger.WithContext(ctx)
 
-	values := make([]interface{}, len(hashes)+1) // array of query values
-	valuesKeys := make([]string, len(hashes))    // "$2,$3...$n"
+	_, err := db.Exec(postgre.setDeleteOnceRow, userID, hash)
+
+	if err != nil {
+		log.Error("Delete", "query", postgre.setDeleteOnceRow, "userID", userID, "hash", hash)
+		log.Error("Delete", "err", err)
+		return err
+	}
+	return nil
+}
+
+func (s *DBStore) delMultiple(ctx context.Context, hashes []string, userID string) error {
+	log := logger.WithContext(ctx)
+	values := make([]any, len(hashes)+1)      // array of query values
+	valuesKeys := make([]string, len(hashes)) // "$2,$3...$n"
 
 	// first value in query sets for: user_id=$1
-	values[0] = ctx.Value(ctxkeys.UserIDKey).(string)
+	values[0] = userID
 
-	for i := 0; i < len(hashes); i++ {
+	for i := range len(hashes) {
 		values[i+1] = hashes[i]
 		valuesKeys[i] = "$" + strconv.Itoa(i+2)
 	}
@@ -185,15 +215,17 @@ func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
 	_, err := db.ExecContext(ctx, query, values...)
 
 	if err != nil {
-		log.Error("Delete", "err", err)
 		log.Error("Delete", "query", query, "values", values)
+		log.Error("Delete", "err", err)
 		return err
 	}
-
 	return nil
 }
 
-func NewDBStore(dsn string) DBStorage {
+// NewDBStore creates and initializes a new PostgreSQL storage instance.
+// It establishes a database connection, sets connection pool parameters,
+// and runs any pending migrations using Goose.
+func NewDBStore(dsn string) Storage {
 	log := logger.Get()
 
 	var err error
@@ -203,10 +235,12 @@ func NewDBStore(dsn string) DBStorage {
 		panic(err)
 	}
 
+	// Set connection pool parameters
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
 
+	// Configure Goose migrations
 	goose.SetBaseFS(embedMigrations)
 
 	if err := goose.SetDialect("postgres"); err != nil {
@@ -219,5 +253,18 @@ func NewDBStore(dsn string) DBStorage {
 
 	log.Debug("NewDBStore", "dsn", dsn)
 
-	return &DBStore{}
+	store := &DBStore{}
+	store.initWorkerPool()
+
+	return store
+}
+
+func (s *DBStore) initWorkerPool() {
+
+	s.dispatcher = workerpool.New(3, s.delByRow)
+	// defer dispatcher.Close()
+
+	// for _, id := range orders {
+	// 	dispatcher.AddWork(id)
+	// }
 }

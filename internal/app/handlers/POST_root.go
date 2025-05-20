@@ -12,6 +12,17 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// HandlerRoot generate short URL
+// @Summary Shorten a URL (text/plain)
+// @Description Creates a short URL from a provided original URL (plain text input)
+// @Tags URLs
+// @Accept text/plain
+// @Produce text/plain
+// @Param request body string true "URL to shorten" example:"https://example.com"
+// @Success 201 {string} string "Short URL"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router / [post]
 func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

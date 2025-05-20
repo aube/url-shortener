@@ -11,10 +11,22 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// StorageList interface
 type StorageList interface {
 	List(c context.Context) (map[string]string, error)
 }
 
+// HandlerAPIUserUrls read multiple URLs for a user
+// @Summary Get user URLs
+// @Description Returns all shortened URLs belonging to the authenticated user
+// @Tags URLs
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {array} handlers.JSONItem
+// @Success 204 "No content"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/user/urls [get]
 func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -46,6 +58,7 @@ func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
 	}
 }
 
+// JSONItem struct
 type JSONItem struct {
 	Hash string `json:"short_url"`
 	URL  string `json:"original_url"`

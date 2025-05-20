@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"log"
 	"net/http"
 
@@ -10,54 +9,37 @@ import (
 	"github.com/aube/url-shortener/internal/app/store"
 )
 
-type StorageGet interface {
-	Get(ctx context.Context, key string) (value string, ok bool)
-}
-type StorageList interface {
-	List(ctx context.Context) (map[string]string, error)
-}
-type StoragePing interface {
-	Ping(ctx context.Context) error
-}
-type StorageSet interface {
-	Set(ctx context.Context, key string, value string) error
-}
-type StorageSetMultiple interface {
-	SetMultiple(ctx context.Context, l map[string]string) error
-}
-type StorageDelete interface {
-	Delete(ctx context.Context, l []string) error
-}
-
-type Storage interface {
-	StorageGet
-	StorageList
-	StoragePing
-	StorageSet
-	StorageSetMultiple
-	StorageDelete
-}
-
+// Run initializes and starts the URL shortener application.
+// It performs the following steps:
+//  1. Loads configuration using config.NewConfig()
+//  2. Initializes the storage backend using store.MewStore()
+//  3. Creates the router with all endpoints using router.New()
+//  4. Starts the HTTP server on the configured address
+//
+// The function blocks until the server exits and returns any error that occurs.
+// In case of a fatal server error, it logs the error and terminates the program.
+//
+// Example usage:
+//
+//	if err := app.Run(); err != nil {
+//	    log.Fatal("Application failed:", err)
+//	}
 func Run() error {
-
+	// Load application configuration
 	config := config.NewConfig()
 
-	var storage Storage
+	// Initialize storage (database, file, or memory based on config)
+	storage := store.MewStore()
 
-	if config.DatabaseDSN != "" {
-		storage = store.NewDBStore(config.DatabaseDSN)
-	} else if config.FileStoragePath != "" {
-		storage = store.NewFileStore(config.FileStoragePath)
-	} else {
-		storage = store.NewMemStore()
-	}
+	// Create router with all endpoints and middleware
+	r := router.New(storage, config.BaseURL)
 
-	router := router.Connect(storage)
-
+	// Construct server address from config
 	address := config.ServerHost + ":" + config.ServerPort
 	log.Println("Server starting", "address", address)
 
-	err := http.ListenAndServe(address, router)
+	// Start HTTP server
+	err := http.ListenAndServe(address, r)
 
 	if err != nil {
 		log.Fatal("Starting server", "err", err)

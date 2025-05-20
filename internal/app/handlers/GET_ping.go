@@ -8,10 +8,19 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// StoragePing interface
 type StoragePing interface {
 	Ping(ctx context.Context) error
 }
 
+// HandlerPing ping database
+// @Summary Check database connection
+// @Description Verifies if the application can connect to the database
+// @Tags Health
+// @Produce text/plain
+// @Success 200 {string} string "pong"
+// @Failure 400 {object} map[string]string "Connection failed"
+// @Router /ping [get]
 func HandlerPing(store StoragePing) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

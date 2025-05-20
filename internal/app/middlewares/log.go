@@ -9,48 +9,51 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-type (
-	// берём структуру для хранения сведений об ответе
-	responseData struct {
-		status int
-		size   int
-	}
+// responseData holds information about the HTTP response.
+type responseData struct {
+	status int // HTTP status code
+	size   int // Response size in bytes
+}
 
-	// добавляем реализацию http.ResponseWriter
-	loggingResponseWriter struct {
-		http.ResponseWriter // встраиваем оригинальный http.ResponseWriter
-		responseData        *responseData
-	}
-)
+// loggingResponseWriter wraps http.ResponseWriter to capture response details.
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	responseData *responseData
+}
 
+// Write captures the response size while writing to the underlying ResponseWriter.
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	// записываем ответ, используя оригинальный http.ResponseWriter
 	size, err := r.ResponseWriter.Write(b)
-	r.responseData.size += size // захватываем размер
+	r.responseData.size += size
 	return size, err
 }
 
+// WriteHeader captures the status code while writing to the underlying ResponseWriter.
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-	// записываем код статуса, используя оригинальный http.ResponseWriter
 	r.ResponseWriter.WriteHeader(statusCode)
-	r.responseData.status = statusCode // захватываем код статуса
+	r.responseData.status = statusCode
 }
 
+// String provides a string representation of the response data.
 func (r *loggingResponseWriter) String() {
 	var buf bytes.Buffer
-
 	buf.WriteString("Response:")
-
 	buf.WriteString("Headers:")
 	for k, v := range r.ResponseWriter.Header() {
 		buf.WriteString(fmt.Sprintf("%s: %v", k, v))
 	}
 }
 
+// LoggingMiddleware logs details about HTTP requests and responses.
+// It captures:
+// - Request method and URI
+// - Response status code
+// - Response size
+// - Duration of the request
+// - Content encoding and type headers
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log := logger.Get()
-
 		start := time.Now()
 
 		responseData := &responseData{
@@ -58,20 +61,20 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 			size:   0,
 		}
 		lw := loggingResponseWriter{
-			ResponseWriter: w, // встраиваем оригинальный http.ResponseWriter
+			ResponseWriter: w,
 			responseData:   responseData,
 		}
-		next.ServeHTTP(&lw, r) // внедряем реализацию http.ResponseWriter
+		next.ServeHTTP(&lw, r)
 
 		duration := time.Since(start)
 
 		log.Info(
 			"LoggingMiddleware",
-			"status", responseData.status, // получаем перехваченный код статуса ответа
+			"status", responseData.status,
 			"method", r.Method,
 			"URI", r.RequestURI,
 			"duration", duration,
-			"size", responseData.size, // получаем перехваченный размер ответа
+			"size", responseData.size,
 			"ce", r.Header.Get("Content-Encoding"),
 			"ct", r.Header.Get("Content-Type"),
 		)

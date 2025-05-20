@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -11,10 +10,22 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
+// StorageSetMultiple interface
 type StorageSetMultiple interface {
 	SetMultiple(context.Context, map[string]string) error
 }
 
+// HandlerShortenBatch create multiple short URLs
+// @Summary Shorten multiple URLs
+// @Description Creates short URLs for multiple provided original URLs
+// @Tags URLs
+// @Accept json
+// @Produce json
+// @Param request body []handlers.inputBatchJSONItem true "Batch of URLs to shorten"
+// @Success 201 {array} handlers.outputBatchJSONItem
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/shorten/batch [post]
 func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -56,8 +67,7 @@ func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerF
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-
-		fmt.Fprintf(w, `%s`, JSON2Batch(outputBatch))
+		w.Write(JSON2Batch(outputBatch))
 	}
 }
 
@@ -84,6 +94,7 @@ type outputBatchJSONItem struct {
 	SHORT string `json:"short_url"`
 }
 
+// JSON2Batch json.Marshal
 func JSON2Batch(outputJSON []outputBatchJSONItem) []byte {
 	log := logger.Get()
 	jsonBytes, err := json.Marshal(outputJSON)
