@@ -36,4 +36,8 @@ cover:
 	go tool cover -html=coverage.out -o test-coverage.html
 	rm coverage.out
 
+.PHONY: staticcheck
+staticcheck:
+	~/go/bin staticcheck ./...
+
 .DEFAULT_GOAL := run
