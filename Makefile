@@ -4,7 +4,12 @@ run:
 
 .PHONY: build
 build:
-	go build -o ./cmd/shortener *.go
+	go build -o ./cmd/shortener/shortener ./cmd/shortener/main.go
+	#go build -o ./cmd/shortener *.go
+
+.PHONY: buildlint
+buildlint:
+	go build -o ./cmd/staticlint/staticlint ./cmd/staticlint/main.go
 
 .PHONY: profbase
 profbase:
