@@ -98,7 +98,7 @@ func (s *DBStore) List(ctx context.Context) (map[string]string, error) {
 		return nil, err
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		log.Error("List", "rows.Err", err)
 		panic(err)
 	}
@@ -158,7 +158,11 @@ func (s *DBStore) SetMultiple(ctx context.Context, items map[string]string) erro
 		if err != nil {
 			log.Error("SetMultiple", "err", err)
 			// Rollback transaction on error
-			tx.Rollback()
+			rberr := tx.Rollback()
+			if rberr != nil {
+				log.Error("SetMultiple Rollback", "err", rberr)
+				return rberr
+			}
 			return err
 		}
 	}

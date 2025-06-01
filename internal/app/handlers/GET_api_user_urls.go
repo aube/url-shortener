@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
@@ -52,9 +51,16 @@ func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
 			log.Error("getJSON", "err", err)
 		}
 
-		fmt.Fprintf(w, `%s`, string(json))
-
 		w.WriteHeader(http.StatusOK)
+
+		n, err := w.Write(json)
+		if err != nil {
+			// Handle error (connection may have been closed)
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+			return
+		}
+
+		log.Info("getJSON", "Wrote bytes", n)
 	}
 }
 

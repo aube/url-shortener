@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -58,9 +57,14 @@ func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
 		}
 		w.WriteHeader(httpStatus)
 
-		shortURL := baseURL + "/" + hash
-		fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
+		shortURL := `{"result":"` + baseURL + "/" + hash + `"}`
+		n, err := w.Write([]byte(shortURL))
+		if err != nil {
+			// Handle error (connection may have been closed)
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+			return
+		}
 
-		log.Debug("URL:", shortURL, httpStatus)
+		log.Info("HandlerAPI", "Wrote bytes", n)
 	}
 }

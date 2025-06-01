@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/aube/url-shortener/internal/logger"
@@ -34,8 +33,14 @@ func HandlerPing(store StoragePing) http.HandlerFunc {
 			return
 		}
 
-		log.Debug("Ping DB")
-		fmt.Fprintf(w, `pong`)
 		w.WriteHeader(http.StatusOK)
+		n, err := w.Write([]byte("pong"))
+		if err != nil {
+			// Handle error (connection may have been closed)
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+			return
+		}
+
+		log.Info("HandlerPing", "Wrote bytes", n)
 	}
 }

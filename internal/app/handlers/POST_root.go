@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -75,11 +74,16 @@ func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
 
 		shortURL := baseURL + "/" + hash
 		if responseContentJSON {
-			fmt.Fprintf(w, `{"result":"%s"}`, shortURL)
-		} else {
-			fmt.Fprintf(w, "%s", shortURL)
+			shortURL = `{"result":"` + baseURL + "/" + hash + `"}`
 		}
 
-		log.Debug("URL:", shortURL, httpStatus)
+		n, err := w.Write([]byte(shortURL))
+		if err != nil {
+			// Handle error (connection may have been closed)
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+			return
+		}
+
+		log.Info("HandlerAPI", "Wrote bytes", n)
 	}
 }

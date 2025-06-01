@@ -9,11 +9,13 @@ import (
 	"testing"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
+	"github.com/aube/url-shortener/internal/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func setupTestFile(t *testing.T) (string, func()) {
+	log := logger.Get()
 	t.Helper()
 
 	// Create a temp directory
@@ -25,7 +27,11 @@ func setupTestFile(t *testing.T) (string, func()) {
 
 	// Return cleanup function
 	return filePath, func() {
-		os.RemoveAll(dir)
+		err = os.RemoveAll(dir)
+		if err != nil {
+			log.Error("setupTestFile", "os.RemoveAll", err)
+			panic("Cant cleanup path")
+		}
 	}
 }
 
