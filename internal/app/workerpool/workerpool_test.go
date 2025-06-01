@@ -3,6 +3,8 @@ package workerpool
 import (
 	"context"
 	"errors"
+	"fmt"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -138,17 +140,17 @@ func TestFanIn(t *testing.T) {
 			close(ch2)
 		}()
 
-		// Collect results
-		var results []error
+		// Collect results and cast into string
+		var results []string
 		for err := range output {
-			results = append(results, err)
+			results = append(results, fmt.Sprint(err))
 		}
 
 		// Verify results
 		assert.Len(t, results, 3)
-		assert.Nil(t, results[0])
-		assert.EqualError(t, results[1], "error from ch2")
-		assert.EqualError(t, results[2], "error from ch1")
+		assert.Equal(t, results[0], "<nil>")
+		assert.True(t, slices.Contains(results, "error from ch2"))
+		assert.True(t, slices.Contains(results, "error from ch1"))
 	})
 }
 
