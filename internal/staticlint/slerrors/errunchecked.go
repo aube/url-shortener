@@ -6,6 +6,17 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// RunErrUnchecked analyzes Go AST to detect unchecked error returns.
+//
+// This function checks for three common patterns where errors might be ignored:
+//  1. Expression statements that return unassigned errors
+//  2. Tuple assignments where errors are assigned to '_'
+//  3. Multiple assignments where function calls return unhandled errors
+//
+// The function uses the analysis pass to report found issues directly.
+//
+// Returns:
+//   - nil, nil: This analyzer doesn't return any meaningful data, only reports findings.
 func RunErrUnchecked(pass *analysis.Pass) (any, error) {
 	expr := func(x *ast.ExprStmt) {
 		// проверяем, что выражение представляет собой вызов функции,

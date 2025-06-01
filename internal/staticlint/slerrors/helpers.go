@@ -7,6 +7,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// errorType represents the Go error interface type for type comparison purposes.
 var errorType = types.
 	// ищем тип error в области вилимости Universe, в котором находятся
 	// все предварительно объявленные объекты Go
@@ -17,12 +18,28 @@ var errorType = types.
 	// мы знаем, что error определен как интерфейс, приведем полученный объект к этому типу
 	Underlying().(*types.Interface)
 
+// isErrorType checks if a given type implements the error interface.
+//
+// Parameters:
+//   - t: The type to check against the error interface
+//
+// Returns:
+//   - bool: true if the type implements error, false otherwise
 func isErrorType(t types.Type) bool {
 	// проверяем, что t реализует интерфейс, при помощи которого определен тип error,
 	// т.е. для типа t определен метод Error() string
 	return types.Implements(t, errorType)
 }
 
+// resultErrors analyzes a function call expression to determine which return values are errors.
+//
+// Parameters:
+//   - pass: The analysis pass containing type information
+//   - call: The function call expression to analyze
+//
+// Returns:
+//   - []bool: A slice where each element indicates whether the corresponding
+//     return value is of error type
 func resultErrors(pass *analysis.Pass, call *ast.CallExpr) []bool {
 	switch t := pass.TypesInfo.Types[call].Type.(type) {
 	case *types.Named: // возвращается значение
@@ -44,7 +61,14 @@ func resultErrors(pass *analysis.Pass, call *ast.CallExpr) []bool {
 	return []bool{false}
 }
 
-// isReturnError возвращает true, если среди возвращаемых значений есть ошибка.
+// isReturnError checks if a function call returns at least one error value.
+//
+// Parameters:
+//   - pass: The analysis pass containing type information
+//   - call: The function call expression to check
+//
+// Returns:
+//   - bool: true if the call returns any error values, false otherwise
 func isReturnError(pass *analysis.Pass, call *ast.CallExpr) bool {
 	for _, isError := range resultErrors(pass, call) {
 		if isError {

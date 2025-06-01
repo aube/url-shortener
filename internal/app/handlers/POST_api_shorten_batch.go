@@ -67,7 +67,15 @@ func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerF
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write(JSON2Batch(outputBatch))
+
+		n, err := w.Write(JSON2Batch(outputBatch))
+		if err != nil {
+			// Handle error (connection may have been closed)
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+			return
+		}
+
+		log.Info("HandlerShortenBatch", "Wrote bytes", n)
 	}
 }
 

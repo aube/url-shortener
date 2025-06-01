@@ -37,10 +37,17 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 // String provides a string representation of the response data.
 func (r *loggingResponseWriter) String() {
 	var buf bytes.Buffer
-	buf.WriteString("Response:")
-	buf.WriteString("Headers:")
+
+	_, err := buf.WriteString("Response headers:")
+	if err != nil {
+		return
+	}
+
 	for k, v := range r.ResponseWriter.Header() {
-		buf.WriteString(fmt.Sprintf("%s: %v", k, v))
+		_, err = buf.WriteString(fmt.Sprintf("%s: %v", k, v))
+		if err != nil {
+			return
+		}
 	}
 }
 

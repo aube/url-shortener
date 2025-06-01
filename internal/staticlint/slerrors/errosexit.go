@@ -1,12 +1,19 @@
 package slerrors
 
 import (
-	"fmt"
 	"go/ast"
 
 	"golang.org/x/tools/go/analysis"
 )
 
+// RunErrOSExit analyzes Go AST to detect direct calls to os.Exit within main functions.
+//
+// This function traverses the AST of each file in the provided analysis pass,
+// specifically looking for function declarations named "main". Within these main
+// functions, it checks for any calls to os.Exit and reports their positions.
+//
+// Returns:
+//   - nil, nil: This analyzer doesn't return any meaningful data, only detects patterns.
 func RunErrOSExit(pass *analysis.Pass) (any, error) {
 	for _, file := range pass.Files {
 
@@ -20,8 +27,8 @@ func RunErrOSExit(pass *analysis.Pass) (any, error) {
 							if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 								if ident, ok := sel.X.(*ast.Ident); ok {
 									if ident.Name == "os" && sel.Sel.Name == "Exit" {
-										pos := pass.Fset.Position(call.Pos())
-										fmt.Printf("  Found os.Exit call at %s\n", pos)
+										pass.Reportf(ident.NamePos, "found os.Exit call")
+
 									}
 								}
 							}

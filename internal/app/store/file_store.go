@@ -45,7 +45,10 @@ func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 	log.Info("Set key:", key, value)
 	s.s[key] = value
 
-	WriteToFile(key, value, s.pathToFile)
+	err := WriteToFile(key, value, s.pathToFile)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -68,8 +71,12 @@ func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) er
 		log.Info("SetMultiple", "key", k, "value", v)
 		s.s[k] = v
 
-		WriteToFile(k, v, s.pathToFile)
+		err := WriteToFile(k, v, s.pathToFile)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -103,12 +110,12 @@ func createDir(storagePath string) {
 }
 
 // createFile creates a new storage file if it doesn't exist.
-func createFile(storagePath string) {
+func createFile(storagePath string) error {
 	log := logger.Get()
 
 	if _, err := os.Stat(storagePath); err == nil {
 		// file exists
-		return
+		return nil
 	}
 
 	data := []byte("")
@@ -119,7 +126,13 @@ func createFile(storagePath string) {
 		panic(err)
 	}
 	defer f.Close()
-	f.Write(data)
+
+	_, err = f.Write(data)
+	if err != nil {
+		log.Error("createFile", "write data", len(data), "err", err)
+		return err
+	}
+	return nil
 }
 
 // itemURL represents the JSON structure used for file storage.
@@ -168,8 +181,15 @@ func getFileContent(storagePath string) map[string]string {
 // NewFileStore creates and initializes a new file-based storage instance.
 // It ensures the storage directory and file exist, and loads any existing data.
 func NewFileStore(storagePath string) Storage {
+	log := logger.Get()
 	createDir(storagePath)
-	createFile(storagePath)
+
+	err := createFile(storagePath)
+	if err != nil {
+		log.Error("NewFileStore", "createFile", err)
+		panic("Cant create file store")
+	}
+
 	data := getFileContent(storagePath)
 
 	return &FileStore{

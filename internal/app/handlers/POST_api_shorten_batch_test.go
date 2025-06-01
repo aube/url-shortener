@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -80,7 +79,6 @@ func TestHandlerShortenBatch(t *testing.T) {
 				assert.NoError(t, err)
 
 				if strings.HasPrefix(tt.expectedResponse, "[") {
-					fmt.Println(string(body))
 					assert.JSONEq(t, strings.TrimSpace(tt.expectedResponse), strings.TrimSpace(string(body)))
 				} else {
 					assert.Equal(t, tt.expectedResponse, string(body))

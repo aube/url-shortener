@@ -39,9 +39,17 @@ func HandlerAPIUserUrlsDel(store StorageDelete, baseURL string) http.HandlerFunc
 
 		var data []string
 
-		json.Unmarshal([]byte(body), &data)
+		err = json.Unmarshal([]byte(body), &data)
+		if err != nil {
+			http.Error(w, "Failed to read JSON", http.StatusInternalServerError)
+			return
+		}
 
-		store.Delete(r.Context(), data)
+		err = store.Delete(r.Context(), data)
+		if err != nil {
+			http.Error(w, "Failed to delete", http.StatusInternalServerError)
+			return
+		}
 
 		w.WriteHeader(http.StatusAccepted)
 	}
