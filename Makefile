@@ -4,8 +4,11 @@ run:
 
 .PHONY: build
 build:
-	go build -o ./cmd/shortener/shortener ./cmd/shortener/main.go
-	#go build -o ./cmd/shortener *.go
+	go build -ldflags "                                     \
+	-X main.buildVersion=v1.0.1                             \
+	-X 'main.buildTime=$$(date +'%Y/%m/%d %H:%M:%S')'       \
+	-X 'main.buildCommit=$$(git rev-parse --short HEAD)'    \
+	"  -o ./cmd/shortener/shortener ./cmd/shortener/main.go \
 
 .PHONY: buildlint
 buildlint:
