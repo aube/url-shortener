@@ -43,7 +43,7 @@ func TestHandlerAPIUserUrlsDel(t *testing.T) {
 					Delete(gomock.Any(), []string{"abc123"}).
 					Return(errors.New("storage error"))
 			},
-			expectedStatus: http.StatusAccepted, // Still accepts since operation is async
+			expectedStatus: http.StatusInternalServerError,
 		},
 	}
 
