@@ -7,6 +7,7 @@ import (
 	"github.com/aube/url-shortener/internal/app/config"
 	"github.com/aube/url-shortener/internal/app/router"
 	"github.com/aube/url-shortener/internal/app/store"
+	"github.com/go-chi/chi/v5"
 )
 
 // Run initializes and starts the URL shortener application.
@@ -34,16 +35,33 @@ func Run() error {
 	// Create router with all endpoints and middleware
 	r := router.New(storage, config.BaseURL)
 
-	// Construct server address from config
-	address := config.ServerHost + ":" + config.ServerPort
-	log.Println("Server starting", "address", address)
-
-	// Start HTTP server
-	err := http.ListenAndServe(address, r)
+	err := startServer(config, &r)
 
 	if err != nil {
 		log.Fatal("Starting server", "err", err)
 	}
 
 	return nil
+}
+
+func startServer(config config.EnvConfig, r *chi.Router) error {
+	var err error
+
+	// Construct server address from config
+	address := config.ServerHost + ":" + config.ServerPort
+	log.Println("Server starting", "address", address)
+
+	if config.EnableHTTPS {
+		// Start HTTPS server
+		err = http.ListenAndServeTLS(
+			address,
+			config.PublicCertFile,
+			config.PrivateCertFile,
+			*r)
+	} else {
+		// Start HTTP server
+		err = http.ListenAndServe(address, *r)
+	}
+
+	return err
 }

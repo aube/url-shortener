@@ -21,6 +21,9 @@ type EnvConfig struct {
 	TokenSecretString     string `env:"DATABASE_DSN ^_^ "` // Secret for JWT tokens (string)
 	TokenSecret           []byte // Secret for JWT tokens (bytes)
 	DefaultRequestTimeout int    `env:"DEFAULT_REQUEST_TIMEOUT"` // Default request timeout in seconds
+	PublicCertFile        string `env:"PUBLIC_CERT_FILE" envDefault:"snakeoil.PEM"`
+	PrivateCertFile       string `env:"PRIVATE_CERT_FILE" envDefault:"snakeoil-private.PEM"`
+	EnableHTTPS           bool   `env:"ENABLE_HTTPS"`
 }
 
 var config EnvConfig
@@ -51,12 +54,14 @@ func NewConfig() EnvConfig {
 	var flagStoragePath string
 	var flagStorageDir string
 	var flagDatabaseDSN string
+	var flagEnableHTTPS bool
 
 	flag.StringVar(&flagBaseURL, "b", "http://localhost:8080", "address and port for generated link")
 	flag.StringVar(&flagServerAddress, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&flagDatabaseDSN, "d", "", "Database connection string")
 	flag.StringVar(&flagStorageDir, "dir", "./_hashes", "hashes dir")
 	flag.StringVar(&flagStoragePath, "f", "./_hashes/hashes_list.json", "hashes file")
+	flag.BoolVar(&flagEnableHTTPS, "s", false, "to use https set 1")
 	flag.Parse()
 
 	// Get environment variables
@@ -80,6 +85,9 @@ func NewConfig() EnvConfig {
 	}
 	if config.DefaultRequestTimeout < 1 {
 		config.DefaultRequestTimeout = 5
+	}
+	if config.EnableHTTPS || flagEnableHTTPS {
+		config.EnableHTTPS = true
 	}
 
 	// Parse server address
