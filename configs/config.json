@@ -1,0 +1,10 @@
+{
+  "BASE_URSERVER_ADDRESSL": "localhost:8080",
+  "BASE_URL": "http://localhost",
+  "DATABASE_DSN": "",
+  "TOKEN_SECRET_STING": "DATABASE_DSN ^_^ ",
+  "DEFAULT_REQUEST_TIMEOUT": 15,
+  "PUBLIC_CERT_FILE": "snakeoil.PEM",
+  "PRIVATE_CERT_FILE": "snakeoil-private.PEM",
+  "ENABLE_HTTPS": false
+}

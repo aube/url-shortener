@@ -30,7 +30,7 @@ func setupTestFile(t *testing.T) (string, func()) {
 		err = os.RemoveAll(dir)
 		if err != nil {
 			log.Error("setupTestFile", "os.RemoveAll", err)
-			panic("Cant cleanup path")
+			panic(fmt.Errorf("can't cleanup path: %w", err))
 		}
 	}
 }

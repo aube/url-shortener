@@ -59,7 +59,7 @@ func getToken() string {
 
 	// Create and sign the token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenSecret := config.NewConfig().TokenSecret
+	tokenSecret := []byte(config.NewConfig().TokenSecretString)
 	tokenString, err := token.SignedString(tokenSecret)
 
 	log := logger.Get()
@@ -131,9 +131,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Parse and validate token
-		tokenSecret := config.NewConfig().TokenSecret
+		tokenSecret := []byte(config.NewConfig().TokenSecretString)
 		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 			return tokenSecret, nil
 		})
 
