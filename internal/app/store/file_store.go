@@ -187,7 +187,7 @@ func NewFileStore(storagePath string) Storage {
 	err := createFile(storagePath)
 	if err != nil {
 		log.Error("NewFileStore", "createFile", err)
-		panic("Cant create file store")
+		panic(fmt.Errorf("can't create file store: %w", err))
 	}
 
 	data := getFileContent(storagePath)

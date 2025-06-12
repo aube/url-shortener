@@ -48,19 +48,18 @@ func startServer(config config.EnvConfig, r *chi.Router) error {
 	var err error
 
 	// Construct server address from config
-	address := config.ServerHost + ":" + config.ServerPort
-	log.Println("Server starting", "address", address)
+	log.Println("Server starting", "address", config.ServerAddress)
 
 	if config.EnableHTTPS {
 		// Start HTTPS server
 		err = http.ListenAndServeTLS(
-			address,
+			config.ServerAddress,
 			config.PublicCertFile,
 			config.PrivateCertFile,
 			*r)
 	} else {
 		// Start HTTP server
-		err = http.ListenAndServe(address, *r)
+		err = http.ListenAndServe(config.ServerAddress, *r)
 	}
 
 	return err
