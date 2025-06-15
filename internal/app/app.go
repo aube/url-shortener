@@ -80,21 +80,17 @@ func startServer(config config.EnvConfig, r *chi.Router) error {
 }
 
 func stopServer(srv *http.Server, sigs chan os.Signal) {
-	var (
-		shutdown bool
-	)
-	for !shutdown {
+	for {
 		time.Sleep(1 * time.Second)
-		select {
-		case sig := <-sigs:
+		if sig, ok := <-sigs; ok {
 			if err := store.Close(); err != nil {
 				log.Printf("Store close error: %v", err)
 			}
 			if err := srv.Shutdown(context.Background()); err != nil {
-				log.Printf("Server sutdown error: %v", err)
+				log.Printf("Server shutdown error: %v", err)
 			}
-			log.Println("Server stopped", "signal", sig)
-			shutdown = true
+			log.Println("Server stopped.", "Signal:", sig)
+			return
 		}
 	}
 }
