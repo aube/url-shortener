@@ -10,7 +10,7 @@ import "github.com/aube/url-shortener/internal/app/config"
 //  3. Otherwise returns an in-memory MemoryStore
 //
 // This function serves as a factory for the storage implementations.
-func MewStore() Storage {
+func NewStore() Storage {
 	config := config.NewConfig()
 	if config.DatabaseDSN != "" {
 		return NewDBStore(config.DatabaseDSN)
@@ -18,4 +18,13 @@ func MewStore() Storage {
 		return NewFileStore(config.FileStoragePath)
 	}
 	return NewMemStore()
+}
+
+func Close() error {
+	config := config.NewConfig()
+	if config.DatabaseDSN != "" {
+		return CloseDBStore()
+	}
+	return nil
+
 }
