@@ -263,12 +263,10 @@ func NewDBStore(dsn string) Storage {
 	return store
 }
 
+func CloseDBStore() error {
+	return db.Close()
+}
+
 func (s *DBStore) initWorkerPool() {
-
 	s.dispatcher = workerpool.New(3, s.delByRow)
-	// defer dispatcher.Close()
-
-	// for _, id := range orders {
-	// 	dispatcher.AddWork(id)
-	// }
 }

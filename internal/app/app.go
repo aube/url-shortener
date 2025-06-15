@@ -1,8 +1,14 @@
 package app
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/aube/url-shortener/internal/app/config"
 	"github.com/aube/url-shortener/internal/app/router"
@@ -13,7 +19,7 @@ import (
 // Run initializes and starts the URL shortener application.
 // It performs the following steps:
 //  1. Loads configuration using config.NewConfig()
-//  2. Initializes the storage backend using store.MewStore()
+//  2. Initializes the storage backend using store.NewStore()
 //  3. Creates the router with all endpoints using router.New()
 //  4. Starts the HTTP server on the configured address
 //
@@ -30,7 +36,7 @@ func Run() error {
 	config := config.NewConfig()
 
 	// Initialize storage (database, file, or memory based on config)
-	storage := store.MewStore()
+	storage := store.NewStore()
 
 	// Create router with all endpoints and middleware
 	r := router.New(storage, config.BaseURL)
@@ -50,6 +56,14 @@ func startServer(config config.EnvConfig, r *chi.Router) error {
 	// Construct server address from config
 	log.Println("Server starting", "address", config.ServerAddress)
 
+	var srv = http.Server{Addr: ":8080"}
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM)
+	stopServer(&srv, sigs)
+
+	fmt.Printf("TYPE: %T\n", &srv) // "int"
+
 	if config.EnableHTTPS {
 		// Start HTTPS server
 		err = http.ListenAndServeTLS(
@@ -63,4 +77,24 @@ func startServer(config config.EnvConfig, r *chi.Router) error {
 	}
 
 	return err
+}
+
+func stopServer(srv *http.Server, sigs chan os.Signal) {
+	var (
+		shutdown bool
+	)
+	for !shutdown {
+		time.Sleep(1 * time.Second)
+		select {
+		case sig := <-sigs:
+			if err := store.Close(); err != nil {
+				log.Printf("Store close error: %v", err)
+			}
+			if err := srv.Shutdown(context.Background()); err != nil {
+				log.Printf("Server sutdown error: %v", err)
+			}
+			log.Println("Server stopped", "signal", sig)
+			shutdown = true
+		}
+	}
 }
