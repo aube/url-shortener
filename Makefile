@@ -1,6 +1,6 @@
 .PHONY: run
 run:
-	go run ./cmd/shortener/ -d=postgres://pguser:pgpass@localhost:5430/shortenerdb?sslmode=disable
+	go run ./cmd/shortener/ -d=postgres://pguser:pgpass@localhost:5430/shortenerdb?sslmode=disable -c=configs
 
 .PHONY: build
 build:
