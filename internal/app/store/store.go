@@ -1,6 +1,8 @@
 package store
 
-import "github.com/aube/url-shortener/internal/app/config"
+import (
+	"github.com/aube/url-shortener/internal/app/config"
+)
 
 // MewStore creates and returns the appropriate storage implementation
 // based on the application configuration. It checks the configuration
@@ -12,6 +14,7 @@ import "github.com/aube/url-shortener/internal/app/config"
 // This function serves as a factory for the storage implementations.
 func NewStore() Storage {
 	config := config.NewConfig()
+
 	if config.DatabaseDSN != "" {
 		return NewDBStore(config.DatabaseDSN)
 	} else if config.FileStoragePath != "" {

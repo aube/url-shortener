@@ -59,6 +59,7 @@ func NewConfig() EnvConfig {
 	pflag.StringP("server_address", "a", "", "Server address to listen on")
 	pflag.StringP("database_dsn", "d", "", "Database connection string")
 	pflag.StringP("file_storage_path", "f", "", "Path to file storage")
+	pflag.StringP("config_path", "c", "", "Path to config.json")
 	pflag.BoolP("enable_https", "s", false, "Enable HTTPS")
 
 	pflag.Parse()
@@ -68,7 +69,7 @@ func NewConfig() EnvConfig {
 	if err := viper.Unmarshal(&config); err != nil {
 		panic(fmt.Errorf("failed to unmarshal config: %w", err))
 	}
-	fmt.Println("config", config.ServerAddress)
+
 	initialized = true
 
 	return config
