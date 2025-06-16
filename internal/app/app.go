@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +12,6 @@ import (
 	"github.com/aube/url-shortener/internal/app/config"
 	"github.com/aube/url-shortener/internal/app/router"
 	"github.com/aube/url-shortener/internal/app/store"
-	"github.com/go-chi/chi/v5"
 )
 
 // Run initializes and starts the URL shortener application.
@@ -39,58 +37,58 @@ func Run() error {
 	storage := store.NewStore()
 
 	// Create router with all endpoints and middleware
-	r := router.New(storage, config.BaseURL)
-
-	err := startServer(config, &r)
-
-	if err != nil {
-		log.Fatal("Starting server", "err", err)
-	}
-
-	return nil
-}
-
-func startServer(config config.EnvConfig, r *chi.Router) error {
-	var err error
-
-	// Construct server address from config
-	log.Println("Server starting", "address", config.ServerAddress)
-
-	var srv = http.Server{Addr: ":8080"}
+	routes := router.New(storage, config.BaseURL)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM)
-	stopServer(&srv, sigs)
 
-	fmt.Printf("TYPE: %T\n", &srv) // "int"
+	var server = http.Server{Addr: ":8080"}
 
-	if config.EnableHTTPS {
-		// Start HTTPS server
-		err = http.ListenAndServeTLS(
-			config.ServerAddress,
-			config.PublicCertFile,
-			config.PrivateCertFile,
-			*r)
-	} else {
-		// Start HTTP server
-		err = http.ListenAndServe(config.ServerAddress, *r)
-	}
+	go func() {
+		var err error
 
-	return err
-}
+		if config.EnableHTTPS {
 
-func stopServer(srv *http.Server, sigs chan os.Signal) {
-	for {
-		time.Sleep(1 * time.Second)
-		if sig, ok := <-sigs; ok {
-			if err := store.Close(); err != nil {
-				log.Printf("Store close error: %v", err)
-			}
-			if err := srv.Shutdown(context.Background()); err != nil {
-				log.Printf("Server shutdown error: %v", err)
-			}
-			log.Println("Server stopped.", "Signal:", sig)
-			return
+			log.Println("HTTP server starting", "address", config.ServerAddress)
+			// Start HTTPS server
+			err = http.ListenAndServeTLS(
+				config.ServerAddress,
+				config.PublicCertFile,
+				config.PrivateCertFile,
+				routes)
+		} else {
+
+			log.Println("HTTPS server starting", "address", config.ServerAddress)
+			// Start HTTP server
+			err = http.ListenAndServe(config.ServerAddress, routes)
 		}
+
+		if err != nil {
+			log.Fatal("Starting server", "err", err)
+		}
+	}()
+
+	sig := <-sigs
+	log.Printf("Received signal: %v\n", sig)
+
+	// Create a context with timeout for shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Close database
+	if err := store.Close(); err != nil {
+		log.Printf("Store close error: %v", err)
+		return err
+	} else {
+		log.Printf("Store connection closed")
 	}
+
+	// Attempt graceful shutdown
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Server shutdown error: %v\n", err)
+		return err
+	} else {
+		log.Println("Server gracefully stopped")
+	}
+	return nil
 }
