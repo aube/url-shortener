@@ -45,6 +45,7 @@ func NewConfig() EnvConfig {
 	viper.SetDefault("token_secret_string", "~_^")
 	viper.SetDefault("enable_https", false)
 	viper.SetDefault("log_level", "info")
+	viper.SetDefault("file_storage_path", "./_hashes/hashes_list.json")
 	viper.SetDefault("default_request_timeout", 15)
 
 	if configPath != "" {
