@@ -41,9 +41,11 @@ func NewConfig() EnvConfig {
 
 	// Set default values
 	viper.SetDefault("server_address", "localhost:8080")
-	viper.SetDefault("file_storage_path", "./_hashes/hashes_list.json")
+	viper.SetDefault("base_url", "http://localhost:8080")
+	viper.SetDefault("token_secret_string", "~_^")
 	viper.SetDefault("enable_https", false)
 	viper.SetDefault("log_level", "info")
+	viper.SetDefault("default_request_timeout", 15)
 
 	if configPath != "" {
 		// Step 2: Read from config file (lowest priority)
