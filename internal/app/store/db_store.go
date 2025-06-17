@@ -263,6 +263,7 @@ func NewDBStore(dsn string) Storage {
 	return store
 }
 
+// Close database connection
 func CloseDBStore() error {
 	return db.Close()
 }

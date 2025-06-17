@@ -23,11 +23,11 @@ func NewStore() Storage {
 	return NewMemStore()
 }
 
+// Close required for propper termination of the connection to storage
 func Close() error {
 	config := config.NewConfig()
 	if config.DatabaseDSN != "" {
 		return CloseDBStore()
 	}
 	return nil
-
 }
