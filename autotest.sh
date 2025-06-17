@@ -19,7 +19,7 @@ cd -
  -server-port=8080 \
  -file-storage-path=_hashes/hashes_list.json \
  -source-path=. \
- -database-dsn=123
+ -database-dsn=postgres://pguser:pgpass@localhost:5430/shortenerdb?sslmode=disable
 
 
 echo "done iteration:" $ITERATION

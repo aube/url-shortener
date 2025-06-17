@@ -49,7 +49,7 @@ func Run() error {
 
 		if config.EnableHTTPS {
 
-			log.Println("HTTP server starting", "address", config.ServerAddress)
+			log.Println("HTTPS server starting", "address", config.ServerAddress)
 			// Start HTTPS server
 			err = http.ListenAndServeTLS(
 				config.ServerAddress,
@@ -58,7 +58,7 @@ func Run() error {
 				routes)
 		} else {
 
-			log.Println("HTTPS server starting", "address", config.ServerAddress)
+			log.Println("HTTP server starting", "address", config.ServerAddress)
 			// Start HTTP server
 			err = http.ListenAndServe(config.ServerAddress, routes)
 		}
