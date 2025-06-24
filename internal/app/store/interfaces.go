@@ -41,6 +41,12 @@ type StorageDelete interface {
 	Delete(ctx context.Context, l []string) error
 }
 
+// StorageStats defines the interface for get starage statistics.
+type StorageStats interface {
+	// Stats get users and urls amount.
+	Stats(ctx context.Context) (urls int, users int, err error)
+}
+
 // Storage is the comprehensive interface combining all storage operations.
 type Storage interface {
 	StorageGet
@@ -49,4 +55,5 @@ type Storage interface {
 	StorageSet
 	StorageSetMultiple
 	StorageDelete
+	StorageStats
 }

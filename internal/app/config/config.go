@@ -17,6 +17,7 @@ type EnvConfig struct {
 	TokenSecretString     string `mapstructure:"token_secret_string" env:"TOKEN_SECRET_STING" json:"TOKEN_SECRET_STING"`               // Secret for JWT tokens (string)
 	DefaultRequestTimeout int    `mapstructure:"default_request_timeout" env:"DEFAULT_REQUEST_TIMEOUT" json:"DEFAULT_REQUEST_TIMEOUT"` // Default request timeout in seconds
 	PublicCertFile        string `mapstructure:"public_cert_file" env:"PUBLIC_CERT_FILE" json:"PUBLIC_CERT_FILE"`
+	TrustedSubnet         string `mapstructure:"trusted_subnet" env:"TRUSTED_SUBNET" json:"TRUSTED_SUBNET"`
 	PrivateCertFile       string `mapstructure:"private_cert_file" env:"PRIVATE_CERT_FILE" json:"PRIVATE_CERT_FILE"`
 	EnableHTTPS           bool   `mapstructure:"enable_https" env:"ENABLE_HTTPS" json:"ENABLE_HTTPS"`
 }
@@ -45,6 +46,7 @@ func NewConfig() EnvConfig {
 	viper.SetDefault("token_secret_string", "~_^")
 	viper.SetDefault("enable_https", false)
 	viper.SetDefault("log_level", "info")
+	viper.SetDefault("trusted_subnet", "")
 	viper.SetDefault("file_storage_path", "./_hashes/hashes_list.json")
 	viper.SetDefault("default_request_timeout", 15)
 
@@ -63,6 +65,7 @@ func NewConfig() EnvConfig {
 	pflag.StringP("database_dsn", "d", "", "Database connection string")
 	pflag.StringP("file_storage_path", "f", "", "Path to file storage")
 	pflag.StringP("config_path", "c", "", "Path to config.json")
+	pflag.StringP("trusted_subnet", "t", "", "Trusted subnet")
 	pflag.BoolP("enable_https", "s", false, "Enable HTTPS")
 
 	pflag.Parse()
@@ -76,6 +79,10 @@ func NewConfig() EnvConfig {
 	initialized = true
 
 	return config
+}
+
+func SetGlobalConfig(cnf EnvConfig) {
+	config = cnf
 }
 
 // getConfigPath retrieves the configuration file path from command-line flags or environment variables.

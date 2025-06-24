@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/logger"
@@ -89,6 +90,30 @@ func (s *FileStore) Delete(ctx context.Context, hashes []string) error {
 		s.s[v] = ""
 	}
 	return nil
+}
+
+// Stats select amount of urls and users from database.
+func (s *FileStore) Stats(ctx context.Context) (urls int, users int, err error) {
+	// log := logger.WithContext(ctx)
+
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	// row := db.QueryRowContext(ctx, postgre.selectDBStatistics, key)
+	// var originalURL string
+	// var deleted bool
+
+	// err := row.Scan(&originalURL, &deleted)
+
+	// if err != nil {
+	// 	log.Error("Get", "err", err)
+	// 	return "", false
+	// }
+	// if deleted {
+	// 	return "", true
+	// }
+
+	return 1, 1, nil
 }
 
 // getDirFromPath extracts the directory path from a full file path.

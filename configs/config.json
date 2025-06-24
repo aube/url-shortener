@@ -6,5 +6,6 @@
   "DEFAULT_REQUEST_TIMEOUT": 15,
   "PUBLIC_CERT_FILE": "snakeoil.PEM",
   "PRIVATE_CERT_FILE": "snakeoil-private.PEM",
+  "TRUSTED_SUBNET": "",
   "ENABLE_HTTPS": false
 }

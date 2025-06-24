@@ -40,6 +40,11 @@ type StorageDelete interface {
 	Delete(ctx context.Context, l []string) error
 }
 
+// StorageStats defines the interface for get starage statistics.
+type StorageStats interface {
+	Stats(ctx context.Context) (urls int, users int, err error)
+}
+
 // Storage is the comprehensive interface combining all storage operations.
 type Storage interface {
 	StorageGet
@@ -48,6 +53,7 @@ type Storage interface {
 	StorageSet
 	StorageSetMultiple
 	StorageDelete
+	StorageStats
 }
 
 // New creates and configures a chi router with all application routes and middleware.
@@ -106,6 +112,7 @@ func New(storage Storage, BaseURL string) chi.Router {
 			middlewares.LoggingMiddleware,
 		)
 		r.Get("/ping", handlers.HandlerPing(storage))
+		r.Get("/internal/stats", handlers.HandlerInternalStats(storage))
 	})
 
 	// Empty handler for browser favicon requests
