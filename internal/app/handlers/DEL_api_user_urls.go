@@ -1,18 +1,16 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/aube/url-shortener/internal/app/usecases"
+	"github.com/aube/url-shortener/internal/logger"
 )
 
 const numWorkers int = 10
 
-// StorageDelete interface
-type StorageDelete interface {
-	Delete(c context.Context, l []string) error
-}
+var usecasesDeleteURLS = usecases.DeleteURLS
 
 // HandlerAPIUserUrlsDel deletes multiple URLs for a user
 // @Summary Delete user URLs
@@ -27,8 +25,10 @@ type StorageDelete interface {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/user/urls [delete]
-func HandlerAPIUserUrlsDel(store StorageDelete, baseURL string) http.HandlerFunc {
+func HandlerAPIUserUrlsDel(baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		log := logger.WithContext(ctx)
 
 		body, err := io.ReadAll(r.Body)
 
@@ -37,20 +37,16 @@ func HandlerAPIUserUrlsDel(store StorageDelete, baseURL string) http.HandlerFunc
 			return
 		}
 
-		var data []string
+		err = usecasesDeleteURLS(ctx, body)
 
-		err = json.Unmarshal([]byte(body), &data)
 		if err != nil {
-			http.Error(w, "Failed to read JSON", http.StatusInternalServerError)
-			return
-		}
-
-		err = store.Delete(r.Context(), data)
-		if err != nil {
+			log.Error("HandlerAPIUserUrlsDel", "err", err)
 			http.Error(w, "Failed to delete", http.StatusInternalServerError)
 			return
 		}
 
 		w.WriteHeader(http.StatusAccepted)
+
+		log.Debug("HandlerAPIUserUrlsDel", "ok", true)
 	}
 }

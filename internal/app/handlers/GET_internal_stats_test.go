@@ -11,100 +11,89 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockStorageStats is a mock implementation of StorageStats for testing
-type MockStorageStats struct {
+type MockStatsGetter struct {
 	mock.Mock
 }
 
-func (m *MockStorageStats) Stats(ctx context.Context) (int, int, error) {
+func (m *MockStatsGetter) GetStats(ctx context.Context) ([]byte, error) {
 	args := m.Called(ctx)
-	return args.Int(0), args.Int(1), args.Error(2)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
 func TestHandlerInternalStats(t *testing.T) {
-	// Setup test cases
+
 	tests := []struct {
-		name              string
-		trustedSubnet     string
-		xRealIP           string
-		mockUrls          int
-		mockUsers         int
-		mockError         error
-		expectedStatus    int
-		expectedResponse  string
-		expectErrorLogged bool
+		name           string
+		trustedSubnet  string
+		xRealIP        string
+		mockResponse   []byte
+		mockError      error
+		expectedStatus int
 	}{
 		{
-			name:             "successful request from trusted IP",
-			trustedSubnet:    "192.168.1.0/24",
-			xRealIP:          "192.168.1.100",
-			mockUrls:         42,
-			mockUsers:        10,
-			mockError:        nil,
-			expectedStatus:   http.StatusOK,
-			expectedResponse: `{"urls":42,"users":10}`,
+			name:           "successful stats",
+			trustedSubnet:  "192.168.1.0/24",
+			xRealIP:        "192.168.1.100",
+			mockResponse:   []byte(`{"urls":10,"users":5}`),
+			mockError:      nil,
+			expectedStatus: http.StatusOK,
 		},
 		{
-			name:             "untrusted IP",
-			trustedSubnet:    "192.168.1.0/24",
-			xRealIP:          "10.0.0.1",
-			expectedStatus:   http.StatusForbidden,
-			expectedResponse: "wrong IP\n",
+			name:           "untrusted IP",
+			trustedSubnet:  "192.168.1.0/24",
+			xRealIP:        "10.0.0.1",
+			mockResponse:   nil,
+			mockError:      nil,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:             "no trusted subnet configured",
-			trustedSubnet:    "",
-			xRealIP:          "192.168.1.100",
-			expectedStatus:   http.StatusForbidden,
-			expectedResponse: "wrong IP\n",
+			name:           "no trusted subnet",
+			trustedSubnet:  "",
+			xRealIP:        "192.168.1.100",
+			mockResponse:   nil,
+			mockError:      nil,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:              "storage error",
-			trustedSubnet:     "192.168.1.0/24",
-			xRealIP:           "192.168.1.100",
-			mockError:         assert.AnError,
-			expectedStatus:    http.StatusBadRequest,
-			expectedResponse:  "Error on stats reuest\n",
-			expectErrorLogged: true,
+			name:           "stats error",
+			trustedSubnet:  "192.168.1.0/24",
+			xRealIP:        "192.168.1.100",
+			mockResponse:   nil,
+			mockError:      assert.AnError,
+			expectedStatus: http.StatusBadRequest,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mock storage
-			mockStorage := new(MockStorageStats)
-			mockStorage.On("Stats", mock.Anything).
-				Return(tt.mockUrls, tt.mockUsers, tt.mockError)
-
 			// Override config for test
 			originalConfig := config.NewConfig()
-			defer func() { config.SetGlobalConfig(originalConfig) }()
-
-			testConfig := config.NewConfig()
+			testConfig := originalConfig
 			testConfig.TrustedSubnet = tt.trustedSubnet
 			config.SetGlobalConfig(testConfig)
+			defer func() { config.SetGlobalConfig(originalConfig) }()
 
-			// Create request with X-Real-IP header
+			mockGetter := new(MockStatsGetter)
+			if tt.expectedStatus == http.StatusOK || tt.expectedStatus == http.StatusBadRequest {
+				mockGetter.On("GetStats", mock.Anything).Return(tt.mockResponse, tt.mockError)
+			}
+
+			// Replace the real usecase with our mock
+			originalGet := usecasesGetStats
+			usecasesGetStats = mockGetter.GetStats
+			defer func() { usecasesGetStats = originalGet }()
+
 			req := httptest.NewRequest("GET", "/internal/stats", nil)
 			if tt.xRealIP != "" {
 				req.Header.Set("X-Real-IP", tt.xRealIP)
 			}
+			rr := httptest.NewRecorder()
 
-			// Create response recorder
-			rec := httptest.NewRecorder()
+			handler := HandlerInternalStats()
+			handler.ServeHTTP(rr, req)
 
-			// Call handler
-			handler := HandlerInternalStats(mockStorage)
-			handler(rec, req)
-
-			// Check response
-			assert.Equal(t, tt.expectedStatus, rec.Code)
-			assert.Equal(t, tt.expectedResponse, rec.Body.String())
-
-			// Verify mock expectations
-			if tt.mockError == nil && tt.expectedStatus == http.StatusOK {
-				mockStorage.AssertCalled(t, "Stats", req.Context())
-			}
+			assert.Equal(t, tt.expectedStatus, rr.Code)
+			mockGetter.AssertExpectations(t)
 		})
 	}
 }

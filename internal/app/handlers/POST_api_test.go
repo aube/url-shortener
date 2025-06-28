@@ -1,117 +1,80 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/aube/url-shortener/internal/app/apperrors"
-	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/mock"
 )
 
-type HTTPError struct {
-	Code int
-	Err  error
+type MockURLSaverAPI struct {
+	mock.Mock
 }
 
-func (he *HTTPError) Error() string {
-	return fmt.Sprintf("%d - %s", he.Code, he.Err)
-}
-
-type MockMemoryStore struct {
-	s map[string]string
-}
-
-func (m *MockMemoryStore) Set(c context.Context, k string, v string) error {
-	if v == "conflict" {
-		return apperrors.NewHTTPError(409, "conflict")
-	}
-	return nil
+func (m *MockURLSaverAPI) SaveURL(ctx context.Context, originalURL []byte, baseURL string) (string, error) {
+	args := m.Called(ctx, originalURL, baseURL)
+	return args.String(0), args.Error(1)
 }
 
 func TestHandlerAPI(t *testing.T) {
-	baseURL := "http://localhost:8080"
-	fakeAddress := "http://test.test/test"
-	hash := hasher.CalcHash([]byte(fakeAddress))
-	conflictHash := hasher.CalcHash([]byte("conflict"))
 
-	MemoryStore := &MockMemoryStore{
-		s: map[string]string{},
-	}
-
-	type want struct {
-		statusCode   int
-		responseBody string
-	}
 	tests := []struct {
-		name     string
-		postBody string
-		id       string
-		want     want
+		name           string
+		requestBody    string
+		mockShortURL   string
+		mockError      error
+		expectedStatus int
 	}{
 		{
-			name: "create short URL",
-			want: want{
-				statusCode:   201,
-				responseBody: baseURL + "/" + hash,
-			},
-			postBody: fakeAddress,
+			name:           "successful creation",
+			requestBody:    `{"url":"https://example.com"}`,
+			mockShortURL:   "http://test/abc123",
+			mockError:      nil,
+			expectedStatus: http.StatusCreated,
 		},
-
 		{
-			name: "conflict short URL",
-			want: want{
-				statusCode:   409,
-				responseBody: baseURL + "/" + conflictHash,
-			},
-			postBody: "conflict",
+			name:           "conflict",
+			requestBody:    `{"url":"https://example.com"}`,
+			mockShortURL:   "http://test/abc123",
+			mockError:      assert.AnError,
+			expectedStatus: http.StatusConflict,
 		},
-
 		{
-			name: "error on empty body",
-			want: want{
-				statusCode:   400,
-				responseBody: "Request body is empty\n",
-			},
-			postBody: "",
+			name:           "empty body",
+			requestBody:    "",
+			mockShortURL:   "",
+			mockError:      nil,
+			expectedStatus: http.StatusBadRequest,
 		},
-	}
-
-	cookie := &http.Cookie{
-		Name:     "auth",
-		Value:    "111",
-		Expires:  time.Now().Add(24 * time.Hour), // Cookie expires in 24 hours
-		Path:     "/",                            // Cookie is accessible across the entire site
-		HttpOnly: true,                           // Cookie is not accessible via JavaScript
-		Secure:   false,                          // Set to true if using HTTPS
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.postBody))
-			r.AddCookie(cookie)
-			w := httptest.NewRecorder()
-			h := HandlerRoot(MemoryStore, baseURL)
-			h(w, r)
+			mockSaver := new(MockURLSaverAPI)
+			if tt.requestBody != "" {
+				originalURL := "https://example.com" // Simplified for test
+				mockSaver.On("SaveURL", mock.Anything, []byte(originalURL), "http://test").Return(tt.mockShortURL, tt.mockError)
+			}
 
-			result := w.Result()
+			// Replace the real usecase with our mock
+			originalSave := usecasesSaveURL
+			usecasesSaveURL = mockSaver.SaveURL
+			defer func() { usecasesSaveURL = originalSave }()
 
-			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			req := httptest.NewRequest("POST", "/api/shorten", bytes.NewBufferString(tt.requestBody))
+			rr := httptest.NewRecorder()
 
-			responseBodyResult, err := io.ReadAll(result.Body)
-			require.NoError(t, err)
+			handler := HandlerAPI("http://test")
+			handler.ServeHTTP(rr, req)
 
-			err = result.Body.Close()
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.want.responseBody, string(responseBodyResult))
+			assert.Equal(t, tt.expectedStatus, rr.Code)
+			if tt.requestBody != "" {
+				mockSaver.AssertExpectations(t)
+			}
 		})
 	}
 }

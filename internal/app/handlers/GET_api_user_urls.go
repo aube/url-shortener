@@ -1,19 +1,14 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
+	"github.com/aube/url-shortener/internal/app/usecases"
 	"github.com/aube/url-shortener/internal/logger"
 )
-
-// StorageList interface
-type StorageList interface {
-	List(c context.Context) (map[string]string, error)
-}
 
 // HandlerAPIUserUrls read multiple URLs for a user
 // @Summary Get user URLs
@@ -26,13 +21,13 @@ type StorageList interface {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/user/urls [get]
-func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
+func HandlerAPIUserUrls(baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log := logger.WithContext(ctx)
 		w.Header().Set("Content-Type", "application/json")
 
-		memData, err := store.List(ctx)
+		json, err := usecases.GetURLS(ctx, baseURL)
 
 		var herr *appErrors.HTTPError
 		if errors.As(err, &herr) {
@@ -40,20 +35,18 @@ func HandlerAPIUserUrls(store StorageList, baseURL string) http.HandlerFunc {
 			return
 		}
 
-		if len(memData) == 0 {
+		if len(json) == 2 { // "[]"
 			w.WriteHeader(204)
 			return
 		}
-
-		json, err := getJSON(memData, baseURL)
 
 		if err != nil {
 			log.Error("getJSON", "err", err)
 		}
 
 		w.WriteHeader(http.StatusOK)
-
 		n, err := w.Write(json)
+
 		if err != nil {
 			// Handle error (connection may have been closed)
 			http.Error(w, "Failed to write response", http.StatusInternalServerError)

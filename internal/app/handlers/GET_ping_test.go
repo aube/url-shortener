@@ -2,53 +2,39 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	mockApi "github.com/aube/url-shortener/mocks"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
+	"github.com/stretchr/testify/mock"
 )
 
-func TestHandlerPing(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+type MockPinger struct {
+	mock.Mock
+}
 
+func (m *MockPinger) StorePing(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func TestHandlerPing(t *testing.T) {
 	tests := []struct {
 		name           string
-		setupMock      func(*mockApi.MockStoragePing)
+		mockError      error
 		expectedStatus int
 		expectedBody   string
 	}{
 		{
-			name: "successful ping",
-			setupMock: func(m *mockApi.MockStoragePing) {
-				m.EXPECT().
-					Ping(gomock.Any()).
-					Return(nil)
-			},
+			name:           "successful ping",
+			mockError:      nil,
 			expectedStatus: http.StatusOK,
 			expectedBody:   "pong",
 		},
 		{
-			name: "failed ping",
-			setupMock: func(m *mockApi.MockStoragePing) {
-				m.EXPECT().
-					Ping(gomock.Any()).
-					Return(errors.New("connection failed"))
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "URL not found\n",
-		},
-		{
-			name: "context canceled",
-			setupMock: func(m *mockApi.MockStoragePing) {
-				m.EXPECT().
-					Ping(gomock.Any()).
-					Return(context.Canceled)
-			},
+			name:           "ping error",
+			mockError:      assert.AnError,
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   "URL not found\n",
 		},
@@ -56,68 +42,23 @@ func TestHandlerPing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockStorage := mockApi.NewMockStoragePing(ctrl)
-			if tt.setupMock != nil {
-				tt.setupMock(mockStorage)
-			}
+			mockPinger := new(MockPinger)
+			mockPinger.On("StorePing", mock.Anything).Return(tt.mockError)
 
-			handler := HandlerPing(mockStorage)
+			// Replace the real usecase with our mock
+			originalPing := usecasesStorePing
+			usecasesStorePing = mockPinger.StorePing
+			defer func() { usecasesStorePing = originalPing }()
 
-			req := httptest.NewRequest(http.MethodGet, "/ping", nil)
-			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/ping", nil)
+			rr := httptest.NewRecorder()
 
-			handler(w, req)
+			handler := HandlerPing()
+			handler.ServeHTTP(rr, req)
 
-			res := w.Result()
-			defer res.Body.Close()
-
-			assert.Equal(t, tt.expectedStatus, res.StatusCode)
-
-			if tt.expectedBody != "" {
-				body := make([]byte, len(tt.expectedBody))
-				_, err := res.Body.Read(body)
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedBody, string(body))
-			}
-		})
-	}
-}
-
-func TestHandlerPing_ErrorCases(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	errorCases := []struct {
-		name        string
-		err         error
-		expectError bool
-	}{
-		{"database error", errors.New("db timeout"), true},
-		{"context deadline", context.DeadlineExceeded, true},
-		{"nil error", nil, false},
-	}
-
-	for _, tc := range errorCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mockStorage := mockApi.NewMockStoragePing(ctrl)
-			mockStorage.EXPECT().
-				Ping(gomock.Any()).
-				Return(tc.err)
-
-			handler := HandlerPing(mockStorage)
-			req := httptest.NewRequest(http.MethodGet, "/ping", nil)
-			w := httptest.NewRecorder()
-
-			handler(w, req)
-
-			res := w.Result()
-			defer res.Body.Close()
-
-			if tc.expectError {
-				assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-			} else {
-				assert.Equal(t, http.StatusOK, res.StatusCode)
-			}
+			assert.Equal(t, tt.expectedStatus, rr.Code)
+			assert.Contains(t, rr.Body.String(), tt.expectedBody)
+			mockPinger.AssertExpectations(t)
 		})
 	}
 }

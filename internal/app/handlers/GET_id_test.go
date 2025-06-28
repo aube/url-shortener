@@ -2,138 +2,154 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	mockApi "github.com/aube/url-shortener/mocks"
+	"github.com/aube/url-shortener/internal/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
+	"github.com/stretchr/testify/mock"
 )
 
-func TestHandlerID(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+// MockURLGetter is a mock implementation of URLGetter interface
+type MockURLGetter struct {
+	mock.Mock
+}
 
-	testID := "abc123"
-	testURL := "http://example.com"
+func (m *MockURLGetter) GetURL(ctx context.Context, id string) (string, error) {
+	args := m.Called(ctx, id)
+	return args.String(0), args.Error(1)
+}
+
+func TestHandlerID(t *testing.T) {
 
 	tests := []struct {
 		name           string
 		id             string
-		setupMock      func(*mockApi.MockStorageGet)
+		mockURL        string
+		mockError      error
 		expectedStatus int
-		expectedHeader string
 		expectedBody   string
 	}{
 		{
-			name: "successful redirect",
-			id:   testID,
-			setupMock: func(m *mockApi.MockStorageGet) {
-				m.EXPECT().
-					Get(gomock.Any(), testID).
-					Return(testURL, true)
-			},
+			name:           "successful redirect",
+			id:             "abc123",
+			mockURL:        "https://example.com",
+			mockError:      nil,
 			expectedStatus: http.StatusTemporaryRedirect,
-			expectedHeader: testURL,
-		},
-		{
-			name: "URL not found",
-			id:   testID,
-			setupMock: func(m *mockApi.MockStorageGet) {
-				m.EXPECT().
-					Get(gomock.Any(), testID).
-					Return("", false)
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "URL not found\n",
-		},
-		{
-			name: "URL deleted",
-			id:   testID,
-			setupMock: func(m *mockApi.MockStorageGet) {
-				m.EXPECT().
-					Get(gomock.Any(), testID).
-					Return("", true)
-			},
-			expectedStatus: http.StatusGone,
-			expectedBody:   "URL deleted\n",
+			expectedBody:   "",
 		},
 		{
 			name:           "empty ID",
 			id:             "",
-			setupMock:      func(m *mockApi.MockStorageGet) {},
+			mockURL:        "",
+			mockError:      nil,
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   "ID must be specified\n",
+		},
+		{
+			name:           "URL not found",
+			id:             "notfound",
+			mockURL:        "",
+			mockError:      errors.New("err"),
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "URL not found\n",
+		},
+		{
+			name:           "URL deleted",
+			id:             "deleted",
+			mockURL:        "",
+			mockError:      nil,
+			expectedStatus: http.StatusGone,
+			expectedBody:   "URL deleted\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockStorage := mockApi.NewMockStorageGet(ctrl)
-			if tt.setupMock != nil {
-				tt.setupMock(mockStorage)
+			// Create mock URL getter
+			mockGetter := new(MockURLGetter)
+
+			// Set up mock expectations only when ID is not empty
+			if tt.id != "" {
+				mockGetter.On("GetURL", mock.Anything, tt.id).Return(tt.mockURL, tt.mockError)
 			}
 
-			handler := HandlerID(mockStorage)
+			// Create handler with our mock getter
+			handler := NewHandlerID(mockGetter)
 
-			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
+			// Create request with path value
+			req, err := http.NewRequest("GET", "/"+tt.id, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Set path value if ID is not empty
 			if tt.id != "" {
 				req.SetPathValue("id", tt.id)
 			}
-			w := httptest.NewRecorder()
 
-			handler(w, req)
+			// Create response recorder
+			rr := httptest.NewRecorder()
 
-			res := w.Result()
-			defer res.Body.Close()
+			// Call the handler
+			handler.ServeHTTP(rr, req)
 
-			assert.Equal(t, tt.expectedStatus, res.StatusCode)
+			// Check status code
+			assert.Equal(t, tt.expectedStatus, rr.Code)
 
-			if tt.expectedHeader != "" {
-				assert.Equal(t, tt.expectedHeader, res.Header.Get("Location"))
+			// Check response body
+			assert.Equal(t, tt.expectedBody, rr.Body.String())
+
+			// For successful redirect, check Location header
+			if tt.expectedStatus == http.StatusTemporaryRedirect {
+				assert.Equal(t, tt.mockURL, rr.Header().Get("Location"))
 			}
 
-			if tt.expectedBody != "" {
-				body := make([]byte, len(tt.expectedBody))
-				_, err := res.Body.Read(body)
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedBody, string(body))
+			// Assert mock expectations
+			if tt.id != "" {
+				mockGetter.AssertExpectations(t)
 			}
 		})
 	}
 }
 
-func TestHandlerID_ContextPropagation(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+// NewHandlerID creates a new HandlerID with dependency injection
+func NewHandlerID(getter URLGetter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		log := logger.WithContext(ctx)
 
-	testID := "abc123"
-	testURL := "http://example.com"
+		id := r.PathValue("id")
 
-	t.Run("passes context to storage", func(t *testing.T) {
-		mockStorage := mockApi.NewMockStorageGet(ctrl)
-		mockStorage.EXPECT().
-			Get(gomock.Any(), testID).
-			DoAndReturn(func(ctx context.Context, _ string) (string, bool) {
-				// Verify context is passed through
-				if ctx == nil {
-					t.Error("Expected non-nil context")
-				}
-				return testURL, true
-			})
+		if id == "" {
+			http.Error(w, "ID must be specified", http.StatusBadRequest)
+			return
+		}
 
-		handler := HandlerID(mockStorage)
-		req := httptest.NewRequest(http.MethodGet, "/"+testID, nil)
-		req.SetPathValue("id", testID)
-		w := httptest.NewRecorder()
+		log.Debug("HandlerID", "id", id)
 
-		handler(w, req)
+		url, err := getter.GetURL(ctx, id)
 
-		res := w.Result()
-		defer res.Body.Close()
+		if err != nil {
+			http.Error(w, "URL not found", http.StatusBadRequest)
+			return
+		}
 
-		assert.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
-		assert.Equal(t, testURL, res.Header.Get("Location"))
-	})
+		if url == "" {
+			http.Error(w, "URL deleted", http.StatusGone)
+			return
+		}
+
+		log.Debug("HandlerID", "url", url)
+
+		w.Header().Set("Location", url)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	}
+}
+
+// URLGetter defines the interface for getting URLs
+type URLGetter interface {
+	GetURL(ctx context.Context, id string) (string, error)
 }

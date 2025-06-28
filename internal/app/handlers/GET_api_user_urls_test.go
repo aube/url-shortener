@@ -79,7 +79,7 @@ func TestHandlerAPIUserUrls(t *testing.T) {
 				tt.setupMock(mockStorage)
 			}
 
-			handler := HandlerAPIUserUrls(mockStorage, baseURL)
+			handler := HandlerAPIUserUrls(baseURL)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
 			w := httptest.NewRecorder()
@@ -180,7 +180,7 @@ func TestHandlerAPIUserUrls_EdgeCases(t *testing.T) {
 				return map[string]string{}, nil
 			})
 
-		handler := HandlerAPIUserUrls(mockStorage, "http://localhost")
+		handler := HandlerAPIUserUrls("http://localhost")
 		req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
 		w := httptest.NewRecorder()
 

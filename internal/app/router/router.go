@@ -1,7 +1,6 @@
 package router
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/aube/url-shortener/internal/app/handlers"
@@ -9,52 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
-
-// StorageGet defines the interface for retrieving URL mappings.
-type StorageGet interface {
-	Get(ctx context.Context, key string) (value string, ok bool)
-}
-
-// StorageList defines the interface for listing URL mappings.
-type StorageList interface {
-	List(ctx context.Context) (map[string]string, error)
-}
-
-// StoragePing defines the interface for checking storage availability.
-type StoragePing interface {
-	Ping(ctx context.Context) error
-}
-
-// StorageSet defines the interface for storing URL mappings.
-type StorageSet interface {
-	Set(ctx context.Context, key string, value string) error
-}
-
-// StorageSetMultiple defines the interface for batch URL storage operations.
-type StorageSetMultiple interface {
-	SetMultiple(ctx context.Context, l map[string]string) error
-}
-
-// StorageDelete defines the interface for deleting URL mappings.
-type StorageDelete interface {
-	Delete(ctx context.Context, l []string) error
-}
-
-// StorageStats defines the interface for get starage statistics.
-type StorageStats interface {
-	Stats(ctx context.Context) (urls int, users int, err error)
-}
-
-// Storage is the comprehensive interface combining all storage operations.
-type Storage interface {
-	StorageGet
-	StorageList
-	StoragePing
-	StorageSet
-	StorageSetMultiple
-	StorageDelete
-	StorageStats
-}
 
 // New creates and configures a chi router with all application routes and middleware.
 // It takes a Storage implementation and base URL as parameters and returns a configured router.
@@ -64,7 +17,7 @@ type Storage interface {
 //   - User URL management endpoints with auth, logging and timeout
 //   - Batch operations with additional gzip support
 //   - Ping endpoint without auth
-func New(storage Storage, BaseURL string) chi.Router {
+func New(BaseURL string) chi.Router {
 	r := chi.NewRouter()
 
 	// Mount debug profiler
@@ -78,9 +31,9 @@ func New(storage Storage, BaseURL string) chi.Router {
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)
-		r.Get("/{id}", handlers.HandlerID(storage))
-		r.Post("/*", handlers.HandlerRoot(storage, BaseURL))
-		r.Post("/api/*", handlers.HandlerAPI(storage, BaseURL))
+		r.Get("/{id}", handlers.HandlerID())
+		r.Post("/*", handlers.HandlerRoot(BaseURL))
+		r.Post("/api/*", handlers.HandlerAPI(BaseURL))
 	})
 
 	// User URL management endpoints
@@ -90,8 +43,8 @@ func New(storage Storage, BaseURL string) chi.Router {
 			middlewares.AuthMiddleware,
 			middlewares.LoggingMiddleware,
 		)
-		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(storage, BaseURL))
-		r.Delete("/api/user/urls", handlers.HandlerAPIUserUrlsDel(storage, BaseURL))
+		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(BaseURL))
+		r.Delete("/api/user/urls", handlers.HandlerAPIUserUrlsDel(BaseURL))
 	})
 
 	// Batch operations endpoint
@@ -102,7 +55,7 @@ func New(storage Storage, BaseURL string) chi.Router {
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)
-		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(storage, BaseURL))
+		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(BaseURL))
 	})
 
 	// Ping endpoint
@@ -111,8 +64,8 @@ func New(storage Storage, BaseURL string) chi.Router {
 			middlewares.TimeoutMiddleware,
 			middlewares.LoggingMiddleware,
 		)
-		r.Get("/ping", handlers.HandlerPing(storage))
-		r.Get("/internal/stats", handlers.HandlerInternalStats(storage))
+		r.Get("/ping", handlers.HandlerPing())
+		r.Get("/internal/stats", handlers.HandlerInternalStats())
 	})
 
 	// Empty handler for browser favicon requests

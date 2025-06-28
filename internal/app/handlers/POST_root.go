@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
-	"github.com/aube/url-shortener/internal/app/hasher"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
@@ -22,7 +21,7 @@ import (
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router / [post]
-func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
+func HandlerRoot(baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log := logger.WithContext(ctx)
@@ -60,22 +59,20 @@ func HandlerRoot(store StorageSet, baseURL string) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", responseContentType)
 
-		hash := hasher.CalcHash(originalURL)
 		httpStatus := http.StatusCreated
 
-		err = store.Set(ctx, hash, string(originalURL))
+		shortURL, err := usecasesSaveURL(ctx, originalURL, baseURL)
 
 		var herr *appErrors.HTTPError
 		if errors.As(err, &herr) {
 			httpStatus = herr.Code
 		}
 
-		w.WriteHeader(httpStatus)
-
-		shortURL := baseURL + "/" + hash
 		if responseContentJSON {
-			shortURL = `{"result":"` + baseURL + "/" + hash + `"}`
+			shortURL = `{"result":"` + shortURL + `"}`
 		}
+
+		w.WriteHeader(httpStatus)
 
 		n, err := w.Write([]byte(shortURL))
 		if err != nil {

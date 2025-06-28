@@ -1,25 +1,15 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
 	"net"
 	"net/http"
 
 	"github.com/aube/url-shortener/internal/app/config"
+	"github.com/aube/url-shortener/internal/app/usecases"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-// StorageStats defines the interface for storage systems that can provide statistics.
-// Implementations should return counts of URLs and users stored in the system.
-type StorageStats interface {
-	// Stats retrieves statistics from the storage system.
-	// Returns:
-	//   urls - count of stored URLs
-	//   users - count of registered users
-	//   err - any error that occurred during the operation
-	Stats(ctx context.Context) (urls int, users int, err error)
-}
+var usecasesGetStats = usecases.GetStats
 
 // HandlerInternalStats creates an HTTP handler for retrieving internal statistics.
 // The handler checks the requesting IP against a trusted subnet before providing access.
@@ -28,7 +18,7 @@ type StorageStats interface {
 // Returns:
 //
 //	http.HandlerFunc - the HTTP handler function
-func HandlerInternalStats(store StorageStats) http.HandlerFunc {
+func HandlerInternalStats() http.HandlerFunc {
 	config := config.NewConfig()
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -49,23 +39,11 @@ func HandlerInternalStats(store StorageStats) http.HandlerFunc {
 		ctx := r.Context()
 		log := logger.WithContext(ctx)
 
-		urls, users, err := store.Stats(ctx)
+		json, err := usecasesGetStats(ctx)
 
 		if err != nil {
 			http.Error(w, "Error on stats reuest", http.StatusBadRequest)
 			return
-		}
-
-		// JSONItem struct
-		type response struct {
-			Urls  int `json:"urls"`
-			Users int `json:"users"`
-		}
-
-		json, err := json.Marshal(response{Urls: urls, Users: users})
-
-		if err != nil {
-			log.Error("HandlerInternalStats", "json.Marshal", err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -77,7 +55,7 @@ func HandlerInternalStats(store StorageStats) http.HandlerFunc {
 			return
 		}
 
-		log.Info("HandlerInternalStats", "Wrote bytes", n, "urls", urls, "users", users, "json", json)
+		log.Info("HandlerInternalStats", "Wrote bytes", n, "json", json)
 	}
 }
 

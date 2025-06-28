@@ -1,19 +1,14 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 
-	"github.com/aube/url-shortener/internal/app/hasher"
+	"github.com/aube/url-shortener/internal/app/usecases"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-// StorageSetMultiple interface
-type StorageSetMultiple interface {
-	SetMultiple(context.Context, map[string]string) error
-}
+var usecasesSaveMultipleURLs = usecases.SaveMultipleURLs
 
 // HandlerShortenBatch create multiple short URLs
 // @Summary Shorten multiple URLs
@@ -26,7 +21,7 @@ type StorageSetMultiple interface {
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/shorten/batch [post]
-func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerFunc {
+func HandlerShortenBatch(baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log := logger.WithContext(ctx)
@@ -44,20 +39,7 @@ func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerF
 			return
 		}
 
-		inputJSON := batch2JSON(body)
-		outputBatch := []outputBatchJSONItem{}
-		items := make(map[string]string)
-
-		for _, v := range inputJSON {
-			hash := hasher.CalcHash([]byte(v.URL))
-			outputBatch = append(outputBatch, outputBatchJSONItem{
-				ID:    v.ID,
-				SHORT: baseURL + "/" + hash,
-			})
-			items[hash] = v.URL
-		}
-
-		err = store.SetMultiple(r.Context(), items)
+		outputJSON, err := usecasesSaveMultipleURLs(ctx, body, baseURL)
 
 		if err != nil {
 			log.Error("SetMultiple", "err", err)
@@ -68,7 +50,7 @@ func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerF
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		n, err := w.Write(JSON2Batch(outputBatch))
+		n, err := w.Write(outputJSON)
 		if err != nil {
 			// Handle error (connection may have been closed)
 			http.Error(w, "Failed to write response", http.StatusInternalServerError)
@@ -77,39 +59,4 @@ func HandlerShortenBatch(store StorageSetMultiple, baseURL string) http.HandlerF
 
 		log.Info("HandlerShortenBatch", "Wrote bytes", n)
 	}
-}
-
-type inputBatchJSONItem struct {
-	ID  string `json:"correlation_id"`
-	URL string `json:"original_url"`
-}
-
-func batch2JSON(body []byte) []inputBatchJSONItem {
-	log := logger.Get()
-
-	inputJSON := []inputBatchJSONItem{}
-	err := json.Unmarshal(body, &inputJSON)
-
-	if err != nil {
-		log.Error("batch2JSON", "err", err)
-	}
-
-	return inputJSON
-}
-
-type outputBatchJSONItem struct {
-	ID    string `json:"correlation_id"`
-	SHORT string `json:"short_url"`
-}
-
-// JSON2Batch json.Marshal
-func JSON2Batch(outputJSON []outputBatchJSONItem) []byte {
-	log := logger.Get()
-	jsonBytes, err := json.Marshal(outputJSON)
-
-	if err != nil {
-		log.Error("JSON2Batch", "err", err)
-	}
-
-	return jsonBytes
 }

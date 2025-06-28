@@ -34,10 +34,10 @@ func Run() error {
 	config := config.NewConfig()
 
 	// Initialize storage (database, file, or memory based on config)
-	storage := store.NewStore()
+	store.NewStore()
 
 	// Create router with all endpoints and middleware
-	routes := router.New(storage, config.BaseURL)
+	routes := router.New(config.BaseURL)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM)
