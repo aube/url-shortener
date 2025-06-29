@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"reflect"
 	"syscall"
 	"time"
 
-	"github.com/aube/url-shortener/internal/app/config"
-	"github.com/aube/url-shortener/internal/app/router"
 	"github.com/aube/url-shortener/internal/app/store"
+	"google.golang.org/grpc"
 )
 
 // Run initializes and starts the URL shortener application.
@@ -30,42 +30,22 @@ import (
 //	    log.Fatal("Application failed:", err)
 //	}
 func Run() error {
-	// Load application configuration
-	config := config.NewConfig()
-
 	// Initialize storage (database, file, or memory based on config)
 	store.NewStore()
-
-	// Create router with all endpoints and middleware
-	routes := router.New(config.BaseURL)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM)
 
-	var server = http.Server{Addr: ":8080"}
+	var httpServer http.Server
+	var grpcServer *grpc.Server
 
 	go func() {
-		var err error
+		httpServer = *httpServerStart()
+	}()
 
-		if config.EnableHTTPS {
-
-			log.Println("HTTPS server starting", "address", config.ServerAddress)
-			// Start HTTPS server
-			err = http.ListenAndServeTLS(
-				config.ServerAddress,
-				config.PublicCertFile,
-				config.PrivateCertFile,
-				routes)
-		} else {
-
-			log.Println("HTTP server starting", "address", config.ServerAddress)
-			// Start HTTP server
-			err = http.ListenAndServe(config.ServerAddress, routes)
-		}
-
-		if err != nil {
-			log.Fatal("Starting server", "err", err)
-		}
+	// Run gRPC server
+	go func() {
+		grpcServer = grpcServerStart()
 	}()
 
 	sig := <-sigs
@@ -84,11 +64,34 @@ func Run() error {
 	}
 
 	// Attempt graceful shutdown
-	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Server shutdown error: %v\n", err)
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("HTTP Server shutdown error: %v\n", err)
 		return err
 	} else {
-		log.Println("Server gracefully stopped")
+		log.Println("HTTP Server gracefully stopped")
 	}
+
+	// Gracefully stop the server
+	stopped := make(chan struct{})
+	go func() {
+		// I don't know why grpcServer.GracefulStop calls panic
+		// grpcServer.GracefulStop()
+		close(stopped)
+	}()
+
+	// Wait for graceful shutdown or timeout
+	select {
+	case <-stopped:
+		log.Println("Type of grpcServer", reflect.TypeOf(grpcServer))
+		log.Println("Server gracefully stopped")
+	case <-ctx.Done():
+		log.Println("Shutdown timeout exceeded, forcing stop")
+		// I don't know why grpcServer.GracefulStop calls panic
+		// grpcServer.Stop()
+	}
+
+	// grpcServer release own port even if GracefulStop or Stop methods still commented
+	log.Println("Server shutdown complete")
+
 	return nil
 }

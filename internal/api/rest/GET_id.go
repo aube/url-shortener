@@ -1,4 +1,4 @@
-package handlers
+package restapi
 
 import (
 	"net/http"
@@ -6,6 +6,8 @@ import (
 	"github.com/aube/url-shortener/internal/app/usecases"
 	"github.com/aube/url-shortener/internal/logger"
 )
+
+var usecasesGetURL = usecases.GetURL
 
 // HandlerID read URL for a user by ID
 // @Summary Redirect to original URL
@@ -30,7 +32,7 @@ func HandlerID() http.HandlerFunc {
 
 		log.Debug("HandlerID", "id", id)
 
-		url, err := usecases.GetURL(ctx, id)
+		url, err := usecasesGetURL(ctx, id)
 
 		if err != nil {
 			http.Error(w, "URL not found", http.StatusBadRequest)

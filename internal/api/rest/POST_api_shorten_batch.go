@@ -1,4 +1,4 @@
-package handlers
+package restapi
 
 import (
 	"io"
@@ -8,21 +8,20 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-var usecasesSaveURL = usecases.SaveURL
+var usecasesSaveURLS = usecases.SaveURLS
 
-// HandlerAPI create short URL in JSON
-// @Summary Shorten a URL
-// @Description Creates a short URL from a provided original URL
+// HandlerShortenBatch create multiple short URLs
+// @Summary Shorten multiple URLs
+// @Description Creates short URLs for multiple provided original URLs
 // @Tags URLs
 // @Accept json
 // @Produce json
-// @Param request body string true "URL to shorten" example:"https://example.com"
-// @Success 201 {object} map[string]string "URL created"
-// @Success 409 {object} map[string]string "URL already exists"
+// @Param request body []handlers.inputBatchJSONItem true "Batch of URLs to shorten"
+// @Success 201 {array} handlers.outputBatchJSONItem
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /api/shorten [post]
-func HandlerAPI(baseURL string) http.HandlerFunc {
+// @Router /api/shorten/batch [post]
+func HandlerShortenBatch(baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log := logger.WithContext(ctx)
@@ -40,26 +39,24 @@ func HandlerAPI(baseURL string) http.HandlerFunc {
 			return
 		}
 
-		originalURL := readURLFromJSON(body)
-
-		w.Header().Set("Content-Type", "application/json")
-		httpStatus := http.StatusCreated
-
-		shortURL, err := usecasesSaveURL(ctx, originalURL, baseURL)
-		shortURL = `{"result":"` + shortURL + `"}`
+		outputJSON, err := usecasesSaveURLS(ctx, body, baseURL)
 
 		if err != nil {
-			httpStatus = http.StatusConflict
+			log.Error("SetMultiple", "err", err)
+			http.Error(w, "Failed to write URLs", http.StatusInternalServerError)
+			return
 		}
-		w.WriteHeader(httpStatus)
 
-		n, err := w.Write([]byte(shortURL))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+
+		n, err := w.Write(outputJSON)
 		if err != nil {
 			// Handle error (connection may have been closed)
 			http.Error(w, "Failed to write response", http.StatusInternalServerError)
 			return
 		}
 
-		log.Info("HandlerAPI", "Wrote bytes", n)
+		log.Info("HandlerShortenBatch", "Wrote bytes", n)
 	}
 }

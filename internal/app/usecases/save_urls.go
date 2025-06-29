@@ -14,7 +14,7 @@ type StorageSetMultiple interface {
 	SetMultiple(context.Context, map[string]string) error
 }
 
-func SaveMultipleURLs(ctx context.Context, body []byte, baseURL string) ([]byte, error) {
+func SaveURLS(ctx context.Context, body []byte, baseURL string) ([]byte, error) {
 	store := store.NewStore()
 	log := logger.WithContext(ctx)
 

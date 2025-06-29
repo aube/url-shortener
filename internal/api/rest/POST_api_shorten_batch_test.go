@@ -1,4 +1,4 @@
-package handlers
+package restapi
 
 import (
 	"bytes"
@@ -59,9 +59,9 @@ func TestHandlerShortenBatch(t *testing.T) {
 			}
 
 			// Replace the real usecase with our mock
-			originalSave := usecasesSaveMultipleURLs
-			usecasesSaveMultipleURLs = mockSaver.SaveMultipleURLs
-			defer func() { usecasesSaveMultipleURLs = originalSave }()
+			originalSave := usecasesSaveURLS
+			usecasesSaveURLS = mockSaver.SaveMultipleURLs
+			defer func() { usecasesSaveURLS = originalSave }()
 
 			req := httptest.NewRequest("POST", "/api/shorten/batch", bytes.NewBufferString(tt.requestBody))
 			rr := httptest.NewRecorder()

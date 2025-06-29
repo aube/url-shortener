@@ -1,10 +1,9 @@
-package router
+package restapi
 
 import (
 	"net/http"
 
-	"github.com/aube/url-shortener/internal/app/handlers"
-	"github.com/aube/url-shortener/internal/app/middlewares"
+	"github.com/aube/url-shortener/internal/api/middlewares"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -31,9 +30,9 @@ func New(BaseURL string) chi.Router {
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)
-		r.Get("/{id}", handlers.HandlerID())
-		r.Post("/*", handlers.HandlerRoot(BaseURL))
-		r.Post("/api/*", handlers.HandlerAPI(BaseURL))
+		r.Get("/{id}", HandlerID())
+		r.Post("/*", HandlerRoot(BaseURL))
+		r.Post("/api/*", HandlerAPI(BaseURL))
 	})
 
 	// User URL management endpoints
@@ -43,8 +42,8 @@ func New(BaseURL string) chi.Router {
 			middlewares.AuthMiddleware,
 			middlewares.LoggingMiddleware,
 		)
-		r.Get("/api/user/urls", handlers.HandlerAPIUserUrls(BaseURL))
-		r.Delete("/api/user/urls", handlers.HandlerAPIUserUrlsDel(BaseURL))
+		r.Get("/api/user/urls", HandlerAPIUserUrls(BaseURL))
+		r.Delete("/api/user/urls", HandlerAPIUserUrlsDel(BaseURL))
 	})
 
 	// Batch operations endpoint
@@ -55,7 +54,7 @@ func New(BaseURL string) chi.Router {
 			middlewares.LoggingMiddleware,
 			middlewares.GzipMiddleware,
 		)
-		r.Post("/api/shorten/batch", handlers.HandlerShortenBatch(BaseURL))
+		r.Post("/api/shorten/batch", HandlerShortenBatch(BaseURL))
 	})
 
 	// Ping endpoint
@@ -64,12 +63,12 @@ func New(BaseURL string) chi.Router {
 			middlewares.TimeoutMiddleware,
 			middlewares.LoggingMiddleware,
 		)
-		r.Get("/ping", handlers.HandlerPing())
-		r.Get("/internal/stats", handlers.HandlerInternalStats())
+		r.Get("/ping", HandlerPing())
+		r.Get("/internal/stats", HandlerInternalStats())
 	})
 
 	// Empty handler for browser favicon requests
-	r.Get("/favicon.ico", http.HandlerFunc(handlers.HandlerEmpty))
+	r.Get("/favicon.ico", http.HandlerFunc(HandlerEmpty))
 
 	return r
 }
