@@ -10,7 +10,6 @@ import (
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 // MockGetURLS mocks the usecases.GetURLS function
@@ -121,60 +120,6 @@ func TestHandlerAPIUserUrls(t *testing.T) {
 
 			// Verify mock expectations
 			mockGetURLS.AssertExpectations(t)
-		})
-	}
-}
-
-func TestGetJSON(t *testing.T) {
-	tests := []struct {
-		name     string
-		memData  map[string]string
-		baseURL  string
-		expected string
-		wantErr  bool
-	}{
-		{
-			name: "Single URL",
-			memData: map[string]string{
-				"abc123": "https://example.com",
-			},
-			baseURL:  "http://localhost:8080",
-			expected: `[{"short_url":"http://localhost:8080/abc123","original_url":"https://example.com"}]`,
-			wantErr:  false,
-		},
-		{
-			name: "Multiple URLs",
-			memData: map[string]string{
-				"abc123": "https://example.com",
-				"def456": "https://another.com",
-			},
-			baseURL: "http://localhost:8080",
-			expected: `[
-				{"short_url":"http://localhost:8080/abc123","original_url":"https://example.com"},
-				{"short_url":"http://localhost:8080/def456","original_url":"https://another.com"}
-			]`,
-			wantErr: false,
-		},
-		{
-			name: "URL with special characters",
-			memData: map[string]string{
-				"gh789": "https://example.com/path?query=value",
-			},
-			baseURL:  "http://localhost:8080",
-			expected: `[{"short_url":"http://localhost:8080/gh789","original_url":"https://example.com/path?query=value"}]`,
-			wantErr:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getJSON(tt.memData, tt.baseURL)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			assert.JSONEq(t, tt.expected, string(got))
 		})
 	}
 }

@@ -40,7 +40,7 @@ mocks:
 
 .PHONY: test
 test:
-	go test -timeout 30s ./...
+	go test -v -timeout 30s ./...
 
 .PHONY: race
 race:
