@@ -1,3 +1,9 @@
+// Package config handles application configuration management.
+// It supports loading configuration from multiple sources with precedence:
+// 1. Command-line flags (highest priority)
+// 2. Environment variables
+// 3. Configuration file
+// 4. Default values (lowest priority)
 package config
 
 import (
@@ -8,7 +14,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// EnvConfig holds all configuration parameters for the application from env variables and config file.
+// EnvConfig holds all configuration parameters for the application.
+// Fields are tagged to support multiple configuration sources.
 type EnvConfig struct {
 	BaseURL               string `mapstructure:"base_url" env:"BASE_URL" json:"BASE_URL"`                                              // Base URL for shortened links
 	ServerAddress         string `mapstructure:"server_address" env:"SERVER_ADDRESS" json:"SERVER_ADDRESS"`                            // Server address to listen on
@@ -17,6 +24,7 @@ type EnvConfig struct {
 	TokenSecretString     string `mapstructure:"token_secret_string" env:"TOKEN_SECRET_STING" json:"TOKEN_SECRET_STING"`               // Secret for JWT tokens (string)
 	DefaultRequestTimeout int    `mapstructure:"default_request_timeout" env:"DEFAULT_REQUEST_TIMEOUT" json:"DEFAULT_REQUEST_TIMEOUT"` // Default request timeout in seconds
 	PublicCertFile        string `mapstructure:"public_cert_file" env:"PUBLIC_CERT_FILE" json:"PUBLIC_CERT_FILE"`
+	TrustedSubnet         string `mapstructure:"trusted_subnet" env:"TRUSTED_SUBNET" json:"TRUSTED_SUBNET"`
 	PrivateCertFile       string `mapstructure:"private_cert_file" env:"PRIVATE_CERT_FILE" json:"PRIVATE_CERT_FILE"`
 	EnableHTTPS           bool   `mapstructure:"enable_https" env:"ENABLE_HTTPS" json:"ENABLE_HTTPS"`
 }
@@ -45,7 +53,8 @@ func NewConfig() EnvConfig {
 	viper.SetDefault("token_secret_string", "~_^")
 	viper.SetDefault("enable_https", false)
 	viper.SetDefault("log_level", "info")
-	viper.SetDefault("file_storage_path", "./_hashes/hashes_list.json")
+	viper.SetDefault("trusted_subnet", "")
+	viper.SetDefault("file_storage_path", "")
 	viper.SetDefault("default_request_timeout", 15)
 
 	if configPath != "" {
@@ -63,6 +72,7 @@ func NewConfig() EnvConfig {
 	pflag.StringP("database_dsn", "d", "", "Database connection string")
 	pflag.StringP("file_storage_path", "f", "", "Path to file storage")
 	pflag.StringP("config_path", "c", "", "Path to config.json")
+	pflag.StringP("trusted_subnet", "t", "", "Trusted subnet")
 	pflag.BoolP("enable_https", "s", false, "Enable HTTPS")
 
 	pflag.Parse()
@@ -76,6 +86,12 @@ func NewConfig() EnvConfig {
 	initialized = true
 
 	return config
+}
+
+// SetGlobalConfig sets the global configuration instance.
+// This is primarily used for testing purposes to inject mock configurations.
+func SetGlobalConfig(cnf EnvConfig) {
+	config = cnf
 }
 
 // getConfigPath retrieves the configuration file path from command-line flags or environment variables.

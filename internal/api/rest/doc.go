@@ -9,4 +9,4 @@
 // @host localhost:8080
 // @BasePath /api
 
-package handlers
+package restapi

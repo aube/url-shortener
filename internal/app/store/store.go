@@ -1,7 +1,14 @@
 package store
 
 import (
+	"sync"
+
 	"github.com/aube/url-shortener/internal/app/config"
+)
+
+var (
+	storage Storage
+	once    sync.Once
 )
 
 // MewStore creates and returns the appropriate storage implementation
@@ -11,16 +18,19 @@ import (
 //  2. If FileStoragePath is configured, returns a FileStore
 //  3. Otherwise returns an in-memory MemoryStore
 //
-// This function serves as a factory for the storage implementations.
+// This function serves as a singleton for the storage implementations.
 func NewStore() Storage {
-	config := config.NewConfig()
-
-	if config.DatabaseDSN != "" {
-		return NewDBStore(config.DatabaseDSN)
-	} else if config.FileStoragePath != "" {
-		return NewFileStore(config.FileStoragePath)
-	}
-	return NewMemStore()
+	once.Do(func() {
+		config := config.NewConfig()
+		if config.DatabaseDSN != "" {
+			storage = NewDBStore(config.DatabaseDSN)
+		} else if config.FileStoragePath != "" {
+			storage = NewFileStore(config.FileStoragePath)
+		} else {
+			storage = NewMemStore()
+		}
+	})
+	return storage
 }
 
 // Close required for propper termination of the connection to storage

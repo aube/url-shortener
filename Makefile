@@ -1,6 +1,14 @@
 .PHONY: run
 run:
-	go run ./cmd/shortener/ -d=postgres://pguser:pgpass@localhost:5430/shortenerdb?sslmode=disable -c=configs
+	go run ./cmd/shortener/ -d=postgres://pguser:pgpass@localhost:5430/shortenerdb?sslmode=disable -c=configs -t=192.168.1.0/24
+
+.PHONY: runfile
+runfile:
+	go run ./cmd/shortener/ -f=./_storage/urls_list.txt -c=configs -t=192.168.1.0/24
+
+.PHONY: runmem
+runmem:
+	go run ./cmd/shortener/ -c=configs -t=192.168.1.0/24
 
 .PHONY: build
 build:
@@ -46,6 +54,10 @@ cover:
 
 .PHONY: staticcheck
 staticcheck:
-	~/go/bin staticcheck ./...
+	staticcheck ./...
+
+.PHONY: protoc
+protoc:
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/api/grpc/proto/urlshortener.proto
 
 .DEFAULT_GOAL := run

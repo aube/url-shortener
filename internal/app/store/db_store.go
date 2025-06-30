@@ -184,6 +184,26 @@ func (s *DBStore) Delete(ctx context.Context, hashes []string) error {
 	return nil
 }
 
+// Stats select amount of urls and users from database.
+func (s *DBStore) Stats(ctx context.Context) (int, int, error) {
+	log := logger.WithContext(ctx)
+
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	row := db.QueryRowContext(ctx, postgre.selectDBStatistics)
+	var users int
+	var urls int
+
+	err := row.Scan(&urls, &users)
+	if err != nil {
+		log.Error("Stats", "query", postgre.selectDBStatistics)
+		return 0, 0, err
+	}
+
+	return urls, users, nil
+}
+
 func (s *DBStore) delByRow(ctx context.Context, hash string, userID string) error {
 	log := logger.WithContext(ctx)
 
@@ -197,6 +217,7 @@ func (s *DBStore) delByRow(ctx context.Context, hash string, userID string) erro
 	return nil
 }
 
+//lint:ignore U1000 Ignore unused function temporarily for debugging
 func (s *DBStore) delMultiple(ctx context.Context, hashes []string, userID string) error {
 	log := logger.WithContext(ctx)
 	values := make([]any, len(hashes)+1)      // array of query values

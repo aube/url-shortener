@@ -1,18 +1,14 @@
-package handlers
+package restapi
 
 import (
-	"context"
 	"io"
 	"net/http"
 
-	"github.com/aube/url-shortener/internal/app/hasher"
+	"github.com/aube/url-shortener/internal/app/usecases"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-// StorageSet interface
-type StorageSet interface {
-	Set(c context.Context, key string, value string) error
-}
+var usecasesSaveURL = usecases.SaveURL
 
 // HandlerAPI create short URL in JSON
 // @Summary Shorten a URL
@@ -26,7 +22,7 @@ type StorageSet interface {
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/shorten [post]
-func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
+func HandlerAPI(baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log := logger.WithContext(ctx)
@@ -45,19 +41,18 @@ func HandlerAPI(store StorageSet, baseURL string) http.HandlerFunc {
 		}
 
 		originalURL := readURLFromJSON(body)
-		hash := hasher.CalcHash(originalURL)
 
 		w.Header().Set("Content-Type", "application/json")
 		httpStatus := http.StatusCreated
 
-		err = store.Set(r.Context(), hash, string(originalURL))
+		shortURL, err := usecasesSaveURL(ctx, originalURL, baseURL)
+		shortURL = `{"result":"` + shortURL + `"}`
 
 		if err != nil {
 			httpStatus = http.StatusConflict
 		}
 		w.WriteHeader(httpStatus)
 
-		shortURL := `{"result":"` + baseURL + "/" + hash + `"}`
 		n, err := w.Write([]byte(shortURL))
 		if err != nil {
 			// Handle error (connection may have been closed)

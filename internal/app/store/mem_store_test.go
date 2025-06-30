@@ -2,186 +2,156 @@ package store
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
+	"github.com/aube/url-shortener/internal/app/ctxkeys"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestMemoryStore_Get(t *testing.T) {
-	store := NewMemStore().(*MemoryStore)
-	ctx := context.Background()
+func TestMemoryStore(t *testing.T) {
+	ctx := context.WithValue(context.Background(), ctxkeys.UserIDKey, "test-user")
 
-	// Test data
-	store.s["abc123"] = "http://example.com"
-
-	tests := []struct {
-		name        string
-		key         string
-		expectedURL string
-		expectedOk  bool
-	}{
-		{
-			name:        "existing key",
-			key:         "abc123",
-			expectedURL: "http://example.com",
-			expectedOk:  true,
-		},
-		{
-			name:        "non-existent key",
-			key:         "nonexistent",
-			expectedURL: "",
-			expectedOk:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			url, ok := store.Get(ctx, tt.key)
-			assert.Equal(t, tt.expectedURL, url)
-			assert.Equal(t, tt.expectedOk, ok)
-		})
-	}
-}
-
-func TestMemoryStore_Set(t *testing.T) {
-	store := NewMemStore().(*MemoryStore)
-	ctx := context.Background()
-
-	tests := []struct {
-		name        string
-		key         string
-		value       string
-		expectedErr error
-	}{
-		{
-			name:        "successful set",
-			key:         "abc123",
-			value:       "http://example.com",
-			expectedErr: nil,
-		},
-		{
-			name:        "empty key",
-			key:         "",
-			value:       "http://example.com",
-			expectedErr: fmt.Errorf("invalid input"),
-		},
-		{
-			name:        "empty value",
-			key:         "abc123",
-			value:       "",
-			expectedErr: fmt.Errorf("invalid input"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := store.Set(ctx, tt.key, tt.value)
-
-			if tt.expectedErr != nil {
-				assert.EqualError(t, err, tt.expectedErr.Error())
-				return
-			}
-
-			assert.NoError(t, err)
-
-			// Verify the value was actually set
-			url, ok := store.Get(ctx, tt.key)
-			assert.True(t, ok)
-			assert.Equal(t, tt.value, url)
-		})
-	}
-
-	// Test conflict case separately
-	t.Run("conflict", func(t *testing.T) {
-		key := "conflictKey"
-		value := "http://example.com"
-
-		// First set should succeed
-		err := store.Set(ctx, key, value)
-		assert.NoError(t, err)
-
-		// Second set should return conflict
-		err = store.Set(ctx, key, "http://another.com")
-		assert.IsType(t, &appErrors.HTTPError{}, err)
-		assert.Equal(t, 409, err.(*appErrors.HTTPError).Code)
+	t.Run("NewMemStore initializes empty maps", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
+		assert.NotNil(t, store.urls)
+		assert.NotNil(t, store.users)
+		assert.Empty(t, store.urls)
+		assert.Empty(t, store.users)
 	})
-}
 
-func TestMemoryStore_List(t *testing.T) {
-	store := NewMemStore().(*MemoryStore)
-	ctx := context.Background()
+	t.Run("Set and Get", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
 
-	// Test data
-	expectedData := map[string]string{
-		"abc123": "http://example.com",
-		"def456": "http://test.org",
-	}
-	store.s = expectedData
+		err := store.Set(ctx, "abc123", "https://example.com")
+		require.NoError(t, err)
 
-	result, err := store.List(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedData, result)
-}
-
-func TestMemoryStore_Ping(t *testing.T) {
-	store := NewMemStore().(*MemoryStore)
-	ctx := context.Background()
-
-	err := store.Ping(ctx)
-	assert.NoError(t, err)
-}
-
-func TestMemoryStore_SetMultiple(t *testing.T) {
-	store := NewMemStore().(*MemoryStore)
-	ctx := context.Background()
-
-	items := map[string]string{
-		"abc123": "http://example.com",
-		"def456": "http://test.org",
-	}
-
-	err := store.SetMultiple(ctx, items)
-	assert.NoError(t, err)
-
-	// Verify all items were set
-	for k, v := range items {
-		url, ok := store.Get(ctx, k)
+		// Test Get
+		val, ok := store.GetByUser(ctx, "abc123")
 		assert.True(t, ok)
-		assert.Equal(t, v, url)
-	}
-}
+		assert.Equal(t, "https://example.com", val)
 
-func TestMemoryStore_Delete(t *testing.T) {
-	store := NewMemStore().(*MemoryStore)
-	ctx := context.Background()
+		// Test Get with wrong user
+		wrongUserCtx := context.WithValue(context.Background(), ctxkeys.UserIDKey, "wrong-user")
+		val, ok = store.GetByUser(wrongUserCtx, "abc123")
+		assert.False(t, ok)
+		assert.Empty(t, val)
+	})
 
-	// Initialize with test data
-	store.s = map[string]string{
-		"abc123": "http://example.com",
-		"def456": "http://test.org",
-	}
+	t.Run("Set duplicate key", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
 
-	// Delete one item
-	err := store.Delete(ctx, []string{"abc123"})
-	assert.NoError(t, err)
+		err := store.Set(ctx, "abc123", "https://example.com")
+		require.NoError(t, err)
 
-	// Verify deletion
-	url, ok := store.Get(ctx, "abc123")
-	assert.True(t, ok)       // Key still exists
-	assert.Equal(t, "", url) // But value is empty
+		err = store.Set(ctx, "abc123", "https://example.org")
+		require.Error(t, err)
+		assert.Equal(t, "409 - conflict", err.Error())
+	})
 
-	// Other item should remain unchanged
-	url, ok = store.Get(ctx, "def456")
-	assert.True(t, ok)
-	assert.Equal(t, "http://test.org", url)
-}
+	t.Run("List", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
 
-func TestNewMemStore(t *testing.T) {
-	store := NewMemStore().(*MemoryStore)
+		err := store.Set(ctx, "key1", "https://example.com/1")
+		require.NoError(t, err)
+		err = store.Set(ctx, "key2", "https://example.com/2")
+		require.NoError(t, err)
 
-	// Verify initialization
-	assert.NotNil(t, store.s)
-	assert.Empty(t, store.s)
+		// Test with different user
+		otherUserCtx := context.WithValue(context.Background(), ctxkeys.UserIDKey, "other-user")
+		err = store.Set(otherUserCtx, "key3", "https://example.com/3")
+		require.NoError(t, err)
+
+		items, err := store.List(ctx)
+		require.NoError(t, err)
+		assert.Len(t, items, 2)
+		assert.Equal(t, "https://example.com/1", items["key1"])
+		assert.Equal(t, "https://example.com/2", items["key2"])
+	})
+
+	t.Run("SetMultiple", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
+
+		items := map[string]string{
+			"key1": "https://example.com/1",
+			"key2": "https://example.com/2",
+		}
+
+		err := store.SetMultiple(ctx, items)
+		require.NoError(t, err)
+
+		val, ok := store.Get(ctx, "key1")
+		assert.True(t, ok)
+		assert.Equal(t, "https://example.com/1", val)
+
+		val, ok = store.Get(ctx, "key2")
+		assert.True(t, ok)
+		assert.Equal(t, "https://example.com/2", val)
+	})
+
+	t.Run("Delete", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
+
+		err := store.Set(ctx, "key1", "https://example.com/1")
+		require.NoError(t, err)
+		err = store.Set(ctx, "key2", "https://example.com/2")
+		require.NoError(t, err)
+
+		err = store.Delete(ctx, []string{"key1", "key2"})
+		require.NoError(t, err)
+
+		val, ok := store.Get(ctx, "key1")
+		assert.False(t, ok)
+		assert.Empty(t, val)
+
+		val, ok = store.Get(ctx, "key2")
+		assert.False(t, ok)
+		assert.Empty(t, val)
+
+		// Test delete with wrong user doesn't delete
+		store.Set(ctx, "key3", "https://example.com/3")
+		wrongUserCtx := context.WithValue(context.Background(), ctxkeys.UserIDKey, "wrong-user")
+		err = store.Delete(wrongUserCtx, []string{"key3"})
+		require.NoError(t, err)
+		val, ok = store.Get(ctx, "key3")
+		assert.True(t, ok)
+		assert.Equal(t, "https://example.com/3", val)
+	})
+
+	t.Run("Stats", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
+
+		err := store.Set(ctx, "key1", "https://example.com/1")
+		require.NoError(t, err)
+		err = store.Set(ctx, "key2", "https://example.com/2")
+		require.NoError(t, err)
+
+		// Different user
+		otherUserCtx := context.WithValue(context.Background(), ctxkeys.UserIDKey, "other-user")
+		err = store.Set(otherUserCtx, "key3", "https://example.com/3")
+		require.NoError(t, err)
+
+		urlCount, userCount, err := store.Stats(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, 3, urlCount)
+		assert.Equal(t, 2, userCount)
+	})
+
+	t.Run("Ping", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
+		err := store.Ping(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Invalid inputs", func(t *testing.T) {
+		store := NewMemStore().(*MemoryStore)
+
+		err := store.Set(ctx, "", "https://example.com")
+		require.Error(t, err)
+		assert.Equal(t, "invalid input", err.Error())
+
+		err = store.Set(ctx, "key", "")
+		require.Error(t, err)
+		assert.Equal(t, "invalid input", err.Error())
+	})
 }
