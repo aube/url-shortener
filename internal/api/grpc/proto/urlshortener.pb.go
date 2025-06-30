@@ -3,7 +3,7 @@
 // 	protoc-gen-go v1.32.0
 // 	protoc        v3.21.12
 // source: internal/api/grpc/proto/urlshortener.proto
-
+//go:vet off
 package proto
 
 import (
@@ -430,3 +430,4 @@ func file_internal_api_grpc_proto_urlshortener_proto_init() {
 	file_internal_api_grpc_proto_urlshortener_proto_goTypes = nil
 	file_internal_api_grpc_proto_urlshortener_proto_depIdxs = nil
 }
+//go:vet on

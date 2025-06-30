@@ -18,7 +18,7 @@ require (
 	go.uber.org/mock v0.5.2
 	golang.org/x/tools v0.30.0
 	google.golang.org/grpc v1.67.3
-	google.golang.org/protobuf v1.36.1
+	google.golang.org/protobuf v1.36.6
 	honnef.co/go/tools v0.6.1
 )
 
