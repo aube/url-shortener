@@ -3,12 +3,14 @@ package restapi
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type MockURLDeleter struct {
@@ -21,7 +23,6 @@ func (m *MockURLDeleter) DeleteURLS(ctx context.Context, body []byte) error {
 }
 
 func TestHandlerAPIUserUrlsDel(t *testing.T) {
-
 	tests := []struct {
 		name           string
 		requestBody    string
@@ -35,9 +36,9 @@ func TestHandlerAPIUserUrlsDel(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		{
-			name:           "empty body",
-			requestBody:    "",
-			mockError:      nil,
+			name:           "invalid JSON",
+			requestBody:    `{invalid}`,
+			mockError:      assert.AnError,
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
@@ -49,28 +50,44 @@ func TestHandlerAPIUserUrlsDel(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
+			// Create mock
 			mockDeleter := new(MockURLDeleter)
 			if tt.requestBody != "" {
 				mockDeleter.On("DeleteURLS", mock.Anything, []byte(tt.requestBody)).Return(tt.mockError)
 			}
 
-			// Replace the real usecase with our mock
+			// Replace the real function with our mock
 			originalDelete := usecasesDeleteURLS
 			usecasesDeleteURLS = mockDeleter.DeleteURLS
-			defer func() { usecasesDeleteURLS = originalDelete }()
+			defer func() {
+				usecasesDeleteURLS = originalDelete
+			}()
 
-			req := httptest.NewRequest("DELETE", "/api/user/urls", bytes.NewBufferString(tt.requestBody))
+			// Create request
+			var body io.Reader
+			if tt.requestBody != "" {
+				body = bytes.NewBufferString(tt.requestBody)
+			} else {
+				body = nil
+			}
+
+			req, err := http.NewRequest("DELETE", "/api/user/urls", body)
+			require.NoError(t, err)
+
+			// Create response recorder
 			rr := httptest.NewRecorder()
 
-			handler := HandlerAPIUserUrlsDel("http://test")
-			handler.ServeHTTP(rr, req)
+			// Call handler
+			handler := HandlerAPIUserUrlsDel("http://example.com")
+			handler(rr, req)
 
+			// Check response
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 
-			if tt.requestBody != "" {
-				mockDeleter.AssertExpectations(t)
-			}
+			// Verify mock expectations
+			mockDeleter.AssertExpectations(t)
 		})
 	}
 }

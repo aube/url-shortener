@@ -2,6 +2,14 @@
 run:
 	go run ./cmd/shortener/ -d=postgres://pguser:pgpass@localhost:5430/shortenerdb?sslmode=disable -c=configs -t=192.168.1.0/24
 
+.PHONY: runfile
+runfile:
+	go run ./cmd/shortener/ -f=./_storage -c=configs -t=192.168.1.0/24
+
+.PHONY: runmem
+runmem:
+	go run ./cmd/shortener/ -c=configs -t=192.168.1.0/24
+
 .PHONY: build
 build:
 	go build -ldflags "                                     \
@@ -32,7 +40,7 @@ mocks:
 
 .PHONY: test
 test:
-	go test -v -timeout 30s ./...
+	go test -timeout 30s ./...
 
 .PHONY: race
 race:

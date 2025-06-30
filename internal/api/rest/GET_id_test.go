@@ -2,7 +2,6 @@ package restapi
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -52,7 +51,7 @@ func TestHandlerID(t *testing.T) {
 			name:           "URL not found",
 			id:             "notfound",
 			mockURL:        "",
-			mockError:      errors.New("err"),
+			mockError:      assert.AnError,
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   "URL not found\n",
 		},

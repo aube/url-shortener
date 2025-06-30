@@ -47,7 +47,7 @@ func NewConfig() EnvConfig {
 	viper.SetDefault("enable_https", false)
 	viper.SetDefault("log_level", "info")
 	viper.SetDefault("trusted_subnet", "")
-	viper.SetDefault("file_storage_path", "./_storage")
+	viper.SetDefault("file_storage_path", "")
 	viper.SetDefault("default_request_timeout", 15)
 
 	if configPath != "" {

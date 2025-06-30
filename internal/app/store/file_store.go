@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/app/ctxkeys"
@@ -63,7 +63,7 @@ func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 		return appErrors.NewHTTPError(409, "conflict")
 	}
 
-	log.Info("Set key:", key, value)
+	log.Info("Set key:", key, value, "UserID", userID)
 	s.urls[key] = value
 	s.users[key] = userID
 
@@ -93,9 +93,9 @@ func (s *FileStore) List(ctx context.Context) (map[string]string, error) {
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 	urls := make(map[string]string)
 
-	for url, key := range s.urls {
-		if s.users[key] == userID {
-			urls[key] = url
+	for hash, url := range s.urls {
+		if s.users[hash] == userID {
+			urls[hash] = url
 		}
 	}
 	return urls, nil
@@ -141,10 +141,13 @@ func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) er
 // Delete marks one or more URLs as deleted by setting their values to empty string.
 func (s *FileStore) Delete(ctx context.Context, hashes []string) error {
 	log := logger.WithContext(ctx)
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
-	for _, v := range hashes {
-		log.Info("Delete", "hash", v)
-		s.urls[v] = ""
+	for _, hash := range hashes {
+		if s.users[hash] == userID {
+			log.Info("Delete", "hash", hash)
+			delete(s.urls, hash)
+		}
 	}
 	return nil
 }
@@ -155,7 +158,7 @@ func (s *FileStore) Stats(ctx context.Context) (int, int, error) {
 	urls := len(s.urls)
 	users := make(map[string]string)
 
-	for user := range s.users {
+	for _, user := range s.users {
 		users[user] = ""
 	}
 
@@ -163,45 +166,36 @@ func (s *FileStore) Stats(ctx context.Context) (int, int, error) {
 	return urls, len(users), nil
 }
 
-// getDirFromPath extracts the directory path from a full file path.
-func getDirFromPath(path string) (dir string) {
-	parts := strings.Split(path, `/`)
-	return strings.Join(parts[:len(parts)-1], "/")
-}
-
 // createDir creates the directory structure for the storage file if it doesn't exist.
 func createDir(storagePath string) {
 	log := logger.Get()
 
-	d := getDirFromPath(storagePath)
-
-	if err := os.MkdirAll(d, os.ModePerm); err != nil {
+	if err := os.MkdirAll(storagePath, os.ModePerm); err != nil {
 		log.Error("createDir", "storagePath", storagePath, "err", err)
 		panic(err)
 	}
 }
 
 // createFile creates a new storage file if it doesn't exist.
-func createFile(storagePath string) error {
+func createFile(filePath string) error {
 	log := logger.Get()
 
-	if _, err := os.Stat(storagePath); err == nil {
+	if _, err := os.Stat(filePath); err == nil {
 		// file exists
 		return nil
 	}
 
-	data := []byte("")
-	f, err := os.Create(storagePath)
+	f, err := os.Create(filePath)
 
 	if err != nil {
-		log.Error("createFile", "storagePath", storagePath, "err", err)
+		log.Error("createFile", "filePath", filePath, "err", err)
 		panic(err)
 	}
 	defer f.Close()
 
-	_, err = f.Write(data)
+	_, err = f.Write([]byte(""))
 	if err != nil {
-		log.Error("createFile", "write data", len(data), "err", err)
+		log.Error("createFile2", "err", err)
 		return err
 	}
 	return nil
@@ -248,12 +242,15 @@ func getFileContent(storagePath string) map[string]string {
 // It ensures the storage directory and file exist, and loads any existing data.
 func NewFileStore(storagePath string) Storage {
 	log := logger.Get()
-	usersFile := storagePath + "/users_list.json"
-	urlsFile := storagePath + "/urls_list.json"
+
+	urlsFile := filepath.Join(storagePath, "urls_list.json")
+	usersFile := filepath.Join(storagePath, "users_list.json")
 
 	createDir(storagePath)
+	log.Info("NewFileStore", "createDir", storagePath)
 
 	err := createFile(usersFile)
+
 	if err != nil {
 		log.Error("NewFileStore", "create usersFile", err)
 		panic(fmt.Errorf("can't create file store: %w", err))

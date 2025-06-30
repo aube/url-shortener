@@ -12,7 +12,7 @@ import (
 )
 
 // ValidationInterceptor validates incoming requests
-func ValidationInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func ValidationInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	switch r := req.(type) {
 	case *proto.SaveURLRequest:
 		if strings.TrimSpace(r.OriginalUrl) == "" {

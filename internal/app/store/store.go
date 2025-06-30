@@ -22,13 +22,13 @@ var (
 func NewStore() Storage {
 	once.Do(func() {
 		config := config.NewConfig()
-
 		if config.DatabaseDSN != "" {
 			storage = NewDBStore(config.DatabaseDSN)
 		} else if config.FileStoragePath != "" {
 			storage = NewFileStore(config.FileStoragePath)
+		} else {
+			storage = NewMemStore()
 		}
-		storage = NewMemStore()
 	})
 	return storage
 }

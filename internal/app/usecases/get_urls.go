@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/aube/url-shortener/internal/app/store"
 	"github.com/aube/url-shortener/internal/logger"
@@ -22,7 +23,7 @@ func GetURLS(ctx context.Context, baseURL string) ([]byte, error) {
 		log.Error("GetURLS", "err", err)
 		return nil, err
 	}
-
+	fmt.Println(urls)
 	json, err := getJSON(urls, baseURL)
 
 	if err != nil {

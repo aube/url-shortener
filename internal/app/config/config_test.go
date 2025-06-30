@@ -25,7 +25,7 @@ func TestNewConfig(t *testing.T) {
 
 		cfg := NewConfig()
 		assert.Equal(t, "localhost:8080", cfg.ServerAddress)
-		assert.Equal(t, "./_storage", cfg.FileStoragePath)
+		assert.Equal(t, "", cfg.FileStoragePath)
 		assert.False(t, cfg.EnableHTTPS)
 	})
 

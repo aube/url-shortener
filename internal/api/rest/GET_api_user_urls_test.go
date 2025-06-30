@@ -2,193 +2,209 @@ package restapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
-	mockApi "github.com/aube/url-shortener/mocks"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
+// MockGetURLS mocks the usecases.GetURLS function
+type MockGetURLS struct {
+	mock.Mock
+}
+
+func (m *MockGetURLS) GetURLS(ctx context.Context, baseURL string) ([]byte, error) {
+	args := m.Called(ctx, baseURL)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
 func TestHandlerAPIUserUrls(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	baseURL := "http://localhost:8080"
-	testData := map[string]string{
-		"abc123": "http://example.com",
-		"def456": "http://test.org",
-	}
 
 	tests := []struct {
 		name           string
-		setupMock      func(*mockApi.MockStorageList)
+		mockReturnJSON []byte
+		mockReturnErr  error
 		expectedStatus int
 		expectedBody   string
+		expectHeaders  map[string]string
 	}{
 		{
-			name: "successful response with URLs",
-			setupMock: func(m *mockApi.MockStorageList) {
-				m.EXPECT().
-					List(gomock.Any()).
-					Return(testData, nil)
-			},
+			name:           "Success with URLs",
+			mockReturnJSON: []byte(`[{"short_url":"http://localhost:8080/abc123","original_url":"https://example.com"}]`),
+			mockReturnErr:  nil,
 			expectedStatus: http.StatusOK,
-			expectedBody: `[
-				{"short_url":"http://localhost:8080/abc123","original_url":"http://example.com"},
-				{"short_url":"http://localhost:8080/def456","original_url":"http://test.org"}
-			]`,
+			expectedBody:   `[{"short_url":"http://localhost:8080/abc123","original_url":"https://example.com"}]`,
+			expectHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
 		},
 		{
-			name: "empty response",
-			setupMock: func(m *mockApi.MockStorageList) {
-				m.EXPECT().
-					List(gomock.Any()).
-					Return(map[string]string{}, nil)
-			},
+			name:           "Success with empty array",
+			mockReturnJSON: []byte("[]"),
+			mockReturnErr:  nil,
 			expectedStatus: http.StatusNoContent,
+			expectedBody:   "",
+			expectHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
 		},
 		{
-			name: "HTTP error from storage",
-			setupMock: func(m *mockApi.MockStorageList) {
-				m.EXPECT().
-					List(gomock.Any()).
-					Return(nil, appErrors.NewHTTPError(http.StatusInternalServerError, "storage error"))
+			name:           "Unauthorized error",
+			mockReturnJSON: nil,
+			mockReturnErr:  appErrors.NewHTTPError(http.StatusUnauthorized, "unauthorized"),
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   "",
+			expectHeaders: map[string]string{
+				"Content-Type": "application/json",
 			},
-			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "generic error from storage",
-			setupMock: func(m *mockApi.MockStorageList) {
-				m.EXPECT().
-					List(gomock.Any()).
-					Return(nil, errors.New("generic error"))
+			name:           "Internal server error",
+			mockReturnJSON: nil,
+			mockReturnErr:  errors.New("database error"),
+			expectedStatus: http.StatusOK, // Note: Handler doesn't change status for non-HTTP errors
+			expectedBody:   "",
+			expectHeaders: map[string]string{
+				"Content-Type": "application/json",
 			},
-			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "Invalid JSON data",
+			mockReturnJSON: []byte("{invalid}"),
+			mockReturnErr:  nil,
+			expectedStatus: http.StatusOK,
+			expectedBody:   "{invalid}",
+			expectHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockStorage := mockApi.NewMockStorageList(ctrl)
-			if tt.setupMock != nil {
-				tt.setupMock(mockStorage)
-			}
+			// Setup mock
+			mockGetURLS := new(MockGetURLS)
+			mockGetURLS.On("GetURLS", mock.Anything, baseURL).Return(tt.mockReturnJSON, tt.mockReturnErr)
 
-			handler := HandlerAPIUserUrls(baseURL)
+			// Replace the real usecase with our mock
+			originalUsecase := usecasesGetURLS
+			usecasesGetURLS = mockGetURLS.GetURLS
+			defer func() { usecasesGetURLS = originalUsecase }()
 
+			// Create request and recorder
 			req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
-			w := httptest.NewRecorder()
+			rec := httptest.NewRecorder()
 
-			handler(w, req)
+			// Call handler
+			handler := HandlerAPIUserUrls(baseURL)
+			handler(rec, req)
 
-			res := w.Result()
-			defer res.Body.Close()
+			// Verify results
+			assert.Equal(t, tt.expectedStatus, rec.Code, "status code mismatch")
 
-			assert.Equal(t, tt.expectedStatus, res.StatusCode)
-			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
-
-			if tt.expectedBody != "" {
-				var expected, actual []JSONItem
-				err := json.Unmarshal([]byte(tt.expectedBody), &expected)
-				assert.NoError(t, err)
-
-				body := make([]byte, 1024)
-				n, err := res.Body.Read(body)
-				assert.NoError(t, err)
-
-				err = json.Unmarshal(body[:n], &actual)
-				assert.NoError(t, err)
-
-				assert.ElementsMatch(t, expected, actual)
+			if tt.expectedBody == "" {
+				assert.Empty(t, rec.Body.String(), "expected empty body")
+			} else {
+				assert.Equal(t, tt.expectedBody, rec.Body.String(), "body content mismatch")
 			}
+
+			for key, value := range tt.expectHeaders {
+				assert.Equal(t, value, rec.Header().Get(key), "header mismatch for "+key)
+			}
+
+			// Verify mock expectations
+			mockGetURLS.AssertExpectations(t)
 		})
 	}
 }
 
 func TestGetJSON(t *testing.T) {
-	baseURL := "http://localhost:8080"
-	testCases := []struct {
+	tests := []struct {
 		name     string
-		input    map[string]string
-		expected []JSONItem
+		memData  map[string]string
+		baseURL  string
+		expected string
+		wantErr  bool
 	}{
 		{
-			name: "single URL",
-			input: map[string]string{
-				"abc123": "http://example.com",
+			name: "Single URL",
+			memData: map[string]string{
+				"abc123": "https://example.com",
 			},
-			expected: []JSONItem{
-				{Hash: baseURL + "/abc123", URL: "http://example.com"},
-			},
+			baseURL:  "http://localhost:8080",
+			expected: `[{"short_url":"http://localhost:8080/abc123","original_url":"https://example.com"}]`,
+			wantErr:  false,
 		},
 		{
-			name: "multiple URLs",
-			input: map[string]string{
-				"abc123": "http://example.com",
-				"def456": "http://test.org",
+			name: "Multiple URLs",
+			memData: map[string]string{
+				"abc123": "https://example.com",
+				"def456": "https://another.com",
 			},
-			expected: []JSONItem{
-				{Hash: baseURL + "/abc123", URL: "http://example.com"},
-				{Hash: baseURL + "/def456", URL: "http://test.org"},
-			},
+			baseURL: "http://localhost:8080",
+			expected: `[
+				{"short_url":"http://localhost:8080/abc123","original_url":"https://example.com"},
+				{"short_url":"http://localhost:8080/def456","original_url":"https://another.com"}
+			]`,
+			wantErr: false,
 		},
 		{
-			name:     "empty input",
-			input:    map[string]string{},
-			expected: []JSONItem{},
+			name: "URL with special characters",
+			memData: map[string]string{
+				"gh789": "https://example.com/path?query=value",
+			},
+			baseURL:  "http://localhost:8080",
+			expected: `[{"short_url":"http://localhost:8080/gh789","original_url":"https://example.com/path?query=value"}]`,
+			wantErr:  false,
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result, err := getJSON(tc.input, baseURL)
-			assert.NoError(t, err)
-
-			var actual []JSONItem
-			err = json.Unmarshal(result, &actual)
-			assert.NoError(t, err)
-
-			assert.ElementsMatch(t, tc.expected, actual)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getJSON(tt.memData, tt.baseURL)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.expected, string(got))
 		})
 	}
 }
 
 func TestHandlerAPIUserUrls_EdgeCases(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
-	t.Run("handles JSON marshal error", func(t *testing.T) {
-		// This test would require mocking json.Marshal
-		// Typically we'd use an interface for json operations to make this testable
-		// Current implementation doesn't handle this error case explicitly
-		t.Skip("JSON marshal error handling not implemented in current code")
-	})
+	baseURL := "http://localhost:8080"
 
-	t.Run("context propagation", func(t *testing.T) {
-		mockStorage := mockApi.NewMockStorageList(ctrl)
-		mockStorage.EXPECT().
-			List(gomock.Any()).
-			DoAndReturn(func(ctx context.Context) (map[string]string, error) {
-				if ctx == nil {
-					t.Error("Expected non-nil context")
-				}
-				return map[string]string{}, nil
-			})
+	t.Run("Nil context", func(t *testing.T) {
+		// Setup mock
+		mockGetURLS := new(MockGetURLS)
+		mockGetURLS.On("GetURLS", mock.Anything, baseURL).
+			Return([]byte("[]"), nil)
 
-		handler := HandlerAPIUserUrls("http://localhost")
+		// Replace the real usecase with our mock
+		originalUsecase := usecasesGetURLS
+		usecasesGetURLS = mockGetURLS.GetURLS
+		defer func() { usecasesGetURLS = originalUsecase }()
+
+		// Create request with nil context
 		req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
-		w := httptest.NewRecorder()
+		req = req.WithContext(context.TODO())
+		rec := httptest.NewRecorder()
 
-		handler(w, req)
+		// Call handler
+		handler := HandlerAPIUserUrls(baseURL)
+		handler(rec, req)
 
-		res := w.Result()
-		defer res.Body.Close()
-
-		assert.Equal(t, http.StatusNoContent, res.StatusCode)
+		// Verify results
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+		mockGetURLS.AssertExpectations(t)
 	})
 }

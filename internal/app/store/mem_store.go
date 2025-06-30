@@ -61,9 +61,9 @@ func (s *MemoryStore) List(ctx context.Context) (map[string]string, error) {
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 	urls := make(map[string]string)
 
-	for url, key := range s.urls {
-		if s.users[key] == userID {
-			urls[key] = url
+	for hash, url := range s.urls {
+		if s.users[hash] == userID {
+			urls[hash] = url
 		}
 	}
 	return urls, nil
@@ -87,10 +87,10 @@ func (s *MemoryStore) Delete(ctx context.Context, hashes []string) error {
 	log := logger.WithContext(ctx)
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
-	for _, key := range hashes {
-		if s.users[key] == userID {
-			log.Info("Delete", "hash", key)
-			s.urls[key] = ""
+	for _, hash := range hashes {
+		if s.users[hash] == userID {
+			log.Info("Delete", "hash", hash)
+			delete(s.urls, hash)
 		}
 	}
 	return nil
@@ -102,7 +102,7 @@ func (s *MemoryStore) Stats(ctx context.Context) (int, int, error) {
 	urls := len(s.urls)
 	users := make(map[string]string)
 
-	for user := range s.users {
+	for _, user := range s.users {
 		users[user] = ""
 	}
 

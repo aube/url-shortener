@@ -3,12 +3,15 @@ package restapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
 	"github.com/aube/url-shortener/internal/app/usecases"
 	"github.com/aube/url-shortener/internal/logger"
 )
+
+var usecasesGetURLS = usecases.GetURLS
 
 // HandlerAPIUserUrls read multiple URLs for a user
 // @Summary Get user URLs
@@ -27,7 +30,7 @@ func HandlerAPIUserUrls(baseURL string) http.HandlerFunc {
 		log := logger.WithContext(ctx)
 		w.Header().Set("Content-Type", "application/json")
 
-		json, err := usecases.GetURLS(ctx, baseURL)
+		json, err := usecasesGetURLS(ctx, baseURL)
 
 		var herr *appErrors.HTTPError
 		if errors.As(err, &herr) {
@@ -35,7 +38,7 @@ func HandlerAPIUserUrls(baseURL string) http.HandlerFunc {
 			return
 		}
 
-		if len(json) == 2 { // "[]"
+		if len(json) == 2 { // Empty response is "[]"
 			w.WriteHeader(204)
 			return
 		}
@@ -46,6 +49,8 @@ func HandlerAPIUserUrls(baseURL string) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 		n, err := w.Write(json)
+
+		fmt.Println(json)
 
 		if err != nil {
 			// Handle error (connection may have been closed)
