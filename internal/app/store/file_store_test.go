@@ -13,10 +13,11 @@ import (
 func TestFileStore(t *testing.T) {
 	// Setup test directory
 	tempDir := t.TempDir()
+	tempFile := tempDir + "/file_store_test"
 	ctx := context.WithValue(context.Background(), ctxkeys.UserIDKey, "test-user")
 
 	t.Run("NewFileStore creates files", func(t *testing.T) {
-		store := NewFileStore(tempDir).(*FileStore)
+		store := NewFileStore(tempFile).(*FileStore)
 		defer os.RemoveAll(tempDir)
 
 		assert.FileExists(t, store.urlsFile)
@@ -24,7 +25,7 @@ func TestFileStore(t *testing.T) {
 	})
 
 	t.Run("Set and Get", func(t *testing.T) {
-		store := NewFileStore(tempDir).(*FileStore)
+		store := NewFileStore(tempFile).(*FileStore)
 		defer os.RemoveAll(tempDir)
 
 		err := store.Set(ctx, "abc123", "https://example.com")
@@ -43,7 +44,7 @@ func TestFileStore(t *testing.T) {
 	})
 
 	t.Run("Set duplicate key", func(t *testing.T) {
-		store := NewFileStore(tempDir).(*FileStore)
+		store := NewFileStore(tempFile).(*FileStore)
 		defer os.RemoveAll(tempDir)
 
 		err := store.Set(ctx, "abc123", "https://example.com")
@@ -55,7 +56,7 @@ func TestFileStore(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
-		store := NewFileStore(tempDir).(*FileStore)
+		store := NewFileStore(tempFile).(*FileStore)
 		defer os.RemoveAll(tempDir)
 
 		err := store.Set(ctx, "key1", "https://example.com/1")
@@ -76,7 +77,7 @@ func TestFileStore(t *testing.T) {
 	})
 
 	t.Run("SetMultiple", func(t *testing.T) {
-		store := NewFileStore(tempDir).(*FileStore)
+		store := NewFileStore(tempFile).(*FileStore)
 		defer os.RemoveAll(tempDir)
 
 		items := map[string]string{
@@ -97,7 +98,7 @@ func TestFileStore(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		store := NewFileStore(tempDir).(*FileStore)
+		store := NewFileStore(tempFile).(*FileStore)
 		defer os.RemoveAll(tempDir)
 
 		err := store.Set(ctx, "key1", "https://example.com/1")
@@ -118,7 +119,7 @@ func TestFileStore(t *testing.T) {
 	})
 
 	t.Run("Stats", func(t *testing.T) {
-		store := NewFileStore(tempDir).(*FileStore)
+		store := NewFileStore(tempFile).(*FileStore)
 		defer os.RemoveAll(tempDir)
 
 		err := store.Set(ctx, "key1", "https://example.com/1")
@@ -138,7 +139,7 @@ func TestFileStore(t *testing.T) {
 	})
 
 	t.Run("Invalid inputs", func(t *testing.T) {
-		store := NewFileStore(tempDir).(*FileStore)
+		store := NewFileStore(tempFile).(*FileStore)
 		defer os.RemoveAll(tempDir)
 
 		err := store.Set(ctx, "", "https://example.com")

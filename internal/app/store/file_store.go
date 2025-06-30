@@ -256,11 +256,12 @@ func getFileContent(storagePath string) map[string]string {
 // It ensures the storage directory and file exist, and loads any existing data.
 func NewFileStore(storagePath string) Storage {
 	log := logger.Get()
+	dir := filepath.Dir(storagePath)
 
-	urlsFile := filepath.Join(storagePath, "urls_list.json")
-	usersFile := filepath.Join(storagePath, "users_list.json")
+	urlsFile := filepath.Join(storagePath)
+	usersFile := filepath.Join(dir, "users_list.txt")
 
-	createDir(storagePath)
+	createDir(dir)
 	log.Info("NewFileStore", "createDir", storagePath)
 
 	err := createFile(usersFile)

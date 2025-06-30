@@ -4,7 +4,7 @@ run:
 
 .PHONY: runfile
 runfile:
-	go run ./cmd/shortener/ -f=./_storage -c=configs -t=192.168.1.0/24
+	go run ./cmd/shortener/ -f=./_storage/urls_list.txt -c=configs -t=192.168.1.0/24
 
 .PHONY: runmem
 runmem:
