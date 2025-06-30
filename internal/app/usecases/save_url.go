@@ -14,16 +14,11 @@ func SaveURL(ctx context.Context, originalURL []byte, baseURL string) (string, e
 	log := logger.WithContext(ctx)
 
 	hash := hasher.CalcHash(originalURL)
-	err := store.Set(ctx, hash, string(originalURL))
-
-	if err != nil {
-		log.Error("SaveURL", "err", err)
-		return "", err
-	}
-
 	shortURL := baseURL + "/" + hash
 
+	err := store.Set(ctx, hash, string(originalURL))
 	log.Info("SaveURL", "hash", hash)
 
-	return shortURL, nil
+	return shortURL, err
+
 }
