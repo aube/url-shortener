@@ -14,7 +14,7 @@ func TestMemoryStore_Get(t *testing.T) {
 	ctx := context.Background()
 
 	// Test data
-	store.s["abc123"] = "http://example.com"
+	store.urls["abc123"] = "http://example.com"
 
 	tests := []struct {
 		name        string
@@ -118,7 +118,7 @@ func TestMemoryStore_List(t *testing.T) {
 		"abc123": "http://example.com",
 		"def456": "http://test.org",
 	}
-	store.s = expectedData
+	store.urls = expectedData
 
 	result, err := store.List(ctx)
 	assert.NoError(t, err)
@@ -158,7 +158,7 @@ func TestMemoryStore_Delete(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize with test data
-	store.s = map[string]string{
+	store.urls = map[string]string{
 		"abc123": "http://example.com",
 		"def456": "http://test.org",
 	}
@@ -182,6 +182,6 @@ func TestNewMemStore(t *testing.T) {
 	store := NewMemStore().(*MemoryStore)
 
 	// Verify initialization
-	assert.NotNil(t, store.s)
-	assert.Empty(t, store.s)
+	assert.NotNil(t, store.urls)
+	assert.Empty(t, store.urls)
 }

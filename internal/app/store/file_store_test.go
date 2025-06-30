@@ -241,8 +241,8 @@ func TestNewFileStore(t *testing.T) {
 	store := NewFileStore(filePath).(*FileStore)
 
 	// Verify initialization
-	assert.Equal(t, filePath, store.pathToFile)
-	assert.Equal(t, initialData, store.s)
+	assert.Equal(t, filePath, store.urlsFile)
+	assert.Equal(t, initialData, store.urls)
 }
 
 func TestWriteToFile(t *testing.T) {
@@ -250,7 +250,7 @@ func TestWriteToFile(t *testing.T) {
 	defer cleanup()
 
 	// Test writing to file
-	err := WriteToFile("abc123", "http://example.com", filePath)
+	err := WriteToFile(filePath, []byte(`{"Hash":"abc123", "URL":"http://example.com"}`))
 	assert.NoError(t, err)
 
 	// Verify file content
