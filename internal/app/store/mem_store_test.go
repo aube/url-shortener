@@ -27,13 +27,13 @@ func TestMemoryStore(t *testing.T) {
 		require.NoError(t, err)
 
 		// Test Get
-		val, ok := store.Get(ctx, "abc123")
+		val, ok := store.GetByUser(ctx, "abc123")
 		assert.True(t, ok)
 		assert.Equal(t, "https://example.com", val)
 
 		// Test Get with wrong user
 		wrongUserCtx := context.WithValue(context.Background(), ctxkeys.UserIDKey, "wrong-user")
-		val, ok = store.Get(wrongUserCtx, "abc123")
+		val, ok = store.GetByUser(wrongUserCtx, "abc123")
 		assert.False(t, ok)
 		assert.Empty(t, val)
 	})

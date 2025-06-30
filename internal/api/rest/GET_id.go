@@ -35,11 +35,13 @@ func HandlerID() http.HandlerFunc {
 		url, err := usecasesGetURL(ctx, id)
 
 		if err != nil {
+			log.Error("HandlerID", "err", err)
 			http.Error(w, "URL not found", http.StatusBadRequest)
 			return
 		}
 
 		if url == "" {
+			log.Error("HandlerID", "url", "deleted")
 			http.Error(w, "URL deleted", http.StatusGone)
 			return
 		}

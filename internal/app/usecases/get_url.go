@@ -19,11 +19,11 @@ func GetURL(ctx context.Context, id string) (string, error) {
 
 	url, ok := store.Get(ctx, id)
 
+	log.Debug("GetURL", "id", id, "url", url, "ok", ok)
+
 	if !ok {
 		return "", errors.New("not found")
 	}
-
-	log.Debug("GetURL", "id", id, "url", url)
 
 	return url, nil
 }

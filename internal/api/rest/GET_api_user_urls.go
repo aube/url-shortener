@@ -38,7 +38,7 @@ func HandlerAPIUserUrls(baseURL string) http.HandlerFunc {
 			return
 		}
 
-		if len(json) == 2 { // Empty response is "[]"
+		if len(json) == 0 {
 			w.WriteHeader(204)
 			return
 		}

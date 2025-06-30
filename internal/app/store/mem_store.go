@@ -20,6 +20,18 @@ type MemoryStore struct {
 // Returns the URL and true if found, empty string and false otherwise.
 func (s *MemoryStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	log := logger.WithContext(ctx)
+	value, ok = s.urls[key]
+	if ok {
+		log.Info("Get", "key", key, "value", value)
+		return value, ok
+	}
+	return "", false
+}
+
+// Get retrieves a URL by its shortened key from memory.
+// Returns the URL and true if found, empty string and false otherwise.
+func (s *MemoryStore) GetByUser(ctx context.Context, key string) (value string, ok bool) {
+	log := logger.WithContext(ctx)
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
 	value, ok = s.urls[key]

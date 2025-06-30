@@ -38,6 +38,20 @@ type itemUser struct {
 // Returns the URL and true if found, empty string and false otherwise.
 func (s *FileStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	log := logger.WithContext(ctx)
+
+	value, ok = s.urls[key]
+	if ok {
+		log.Info("Get", "key", key, "value", value)
+		return value, ok
+	}
+
+	return "", false
+}
+
+// Get retrieves a URL by its shortened key from the file storage.
+// Returns the URL and true if found, empty string and false otherwise.
+func (s *FileStore) GetByUser(ctx context.Context, key string) (value string, ok bool) {
+	log := logger.WithContext(ctx)
 	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
 	value, ok = s.urls[key]
@@ -76,7 +90,7 @@ func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 		return err
 	}
 
-	json1, err := json.Marshal(itemUser{Hash: key, UserID: value})
+	json1, err := json.Marshal(itemUser{Hash: key, UserID: userID})
 	if err != nil {
 		return err
 	}
