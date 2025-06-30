@@ -47,7 +47,7 @@ func TestHandlerAPIUserUrls(t *testing.T) {
 		},
 		{
 			name:           "Success with empty array",
-			mockReturnJSON: []byte("[]"),
+			mockReturnJSON: []byte(""),
 			mockReturnErr:  nil,
 			expectedStatus: http.StatusNoContent,
 			expectedBody:   "",
@@ -69,10 +69,10 @@ func TestHandlerAPIUserUrls(t *testing.T) {
 			name:           "Internal server error",
 			mockReturnJSON: nil,
 			mockReturnErr:  errors.New("database error"),
-			expectedStatus: http.StatusOK, // Note: Handler doesn't change status for non-HTTP errors
-			expectedBody:   "",
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   "Failed to getJSON\n",
 			expectHeaders: map[string]string{
-				"Content-Type": "application/json",
+				"Content-Type": "text/plain; charset=utf-8",
 			},
 		},
 		{

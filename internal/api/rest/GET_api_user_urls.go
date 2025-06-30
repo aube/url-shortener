@@ -38,13 +38,15 @@ func HandlerAPIUserUrls(baseURL string) http.HandlerFunc {
 			return
 		}
 
-		if len(json) == 0 {
-			w.WriteHeader(204)
+		if err != nil {
+			log.Error("getJSON", "err", err)
+			http.Error(w, "Failed to getJSON", http.StatusInternalServerError)
 			return
 		}
 
-		if err != nil {
-			log.Error("getJSON", "err", err)
+		if len(json) == 0 {
+			w.WriteHeader(204)
+			return
 		}
 
 		w.WriteHeader(http.StatusOK)
