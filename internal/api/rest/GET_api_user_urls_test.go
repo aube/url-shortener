@@ -187,7 +187,7 @@ func TestHandlerAPIUserUrls_EdgeCases(t *testing.T) {
 		// Setup mock
 		mockGetURLS := new(MockGetURLS)
 		mockGetURLS.On("GetURLS", mock.Anything, baseURL).
-			Return([]byte("[]"), nil)
+			Return([]byte(""), nil)
 
 		// Replace the real usecase with our mock
 		originalUsecase := usecasesGetURLS
