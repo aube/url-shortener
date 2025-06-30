@@ -7,46 +7,80 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	appErrors "github.com/aube/url-shortener/internal/app/apperrors"
+	"github.com/aube/url-shortener/internal/app/ctxkeys"
 	"github.com/aube/url-shortener/internal/logger"
 )
 
 // FileStore is a file-based implementation of the Storage interface
 // that persists URL mappings to disk in JSON format.
 type FileStore struct {
-	s          map[string]string
-	pathToFile string
+	urls      map[string]string
+	users     map[string]string
+	usersFile string
+	urlsFile  string
+}
+
+// itemURL represents the JSON structure used for file storage.
+type itemURL struct {
+	Hash string `json:"Hash"`
+	URL  string `json:"OriginalURL"`
+}
+
+// itemUser represents the JSON structure used for file storage.
+type itemUser struct {
+	Hash   string `json:"Hash"`
+	UserID string `json:"UserID"`
 }
 
 // Get retrieves a URL by its shortened key from the file storage.
 // Returns the URL and true if found, empty string and false otherwise.
 func (s *FileStore) Get(ctx context.Context, key string) (value string, ok bool) {
 	log := logger.WithContext(ctx)
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
-	value, ok = s.s[key]
-	log.Info("Get key:", key, value)
-	return value, ok
+	value, ok = s.urls[key]
+	if ok && s.users[key] == userID {
+		log.Info("Get", "key", key, "value", value)
+		return value, ok
+	}
+
+	return "", false
 }
 
 // Set stores a new URL mapping in the file storage.
 // Returns an error if the key is empty, value is empty, or if the key already exists.
 func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 	log := logger.WithContext(ctx)
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
 	if key == "" || value == "" {
 		return fmt.Errorf("invalid input")
 	}
 
-	if _, ok := s.s[key]; ok {
+	if _, ok := s.urls[key]; ok {
 		return appErrors.NewHTTPError(409, "conflict")
 	}
 
 	log.Info("Set key:", key, value)
-	s.s[key] = value
+	s.urls[key] = value
+	s.users[key] = userID
 
-	err := WriteToFile(key, value, s.pathToFile)
+	json0, err := json.Marshal(itemURL{Hash: key, URL: value})
+	if err != nil {
+		return err
+	}
+	err = WriteToFile(s.urlsFile, json0)
+	if err != nil {
+		return err
+	}
+
+	json1, err := json.Marshal(itemUser{Hash: key, UserID: value})
+	if err != nil {
+		return err
+	}
+	err = WriteToFile(s.usersFile, json1)
 	if err != nil {
 		return err
 	}
@@ -56,7 +90,15 @@ func (s *FileStore) Set(ctx context.Context, key string, value string) error {
 
 // List returns all URL mappings currently stored in the file.
 func (s *FileStore) List(ctx context.Context) (map[string]string, error) {
-	return s.s, nil
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
+	urls := make(map[string]string)
+
+	for url, key := range s.urls {
+		if s.users[key] == userID {
+			urls[key] = url
+		}
+	}
+	return urls, nil
 }
 
 // Ping always returns nil for file storage as it doesn't require connection checking.
@@ -67,12 +109,27 @@ func (s *FileStore) Ping(ctx context.Context) error {
 // SetMultiple stores multiple URL mappings in a batch operation.
 func (s *FileStore) SetMultiple(ctx context.Context, items map[string]string) error {
 	log := logger.WithContext(ctx)
+	userID := ctx.Value(ctxkeys.UserIDKey).(string)
 
-	for k, v := range items {
-		log.Info("SetMultiple", "key", k, "value", v)
-		s.s[k] = v
+	for key, value := range items {
+		log.Info("Set key:", key, value)
+		s.urls[key] = value
+		s.users[key] = userID
 
-		err := WriteToFile(k, v, s.pathToFile)
+		json0, err := json.Marshal(itemURL{Hash: key, URL: value})
+		if err != nil {
+			return err
+		}
+		err = WriteToFile(s.urlsFile, json0)
+		if err != nil {
+			return err
+		}
+
+		json1, err := json.Marshal(itemUser{Hash: key, UserID: value})
+		if err != nil {
+			return err
+		}
+		err = WriteToFile(s.usersFile, json1)
 		if err != nil {
 			return err
 		}
@@ -87,33 +144,23 @@ func (s *FileStore) Delete(ctx context.Context, hashes []string) error {
 
 	for _, v := range hashes {
 		log.Info("Delete", "hash", v)
-		s.s[v] = ""
+		s.urls[v] = ""
 	}
 	return nil
 }
 
 // Stats select amount of urls and users from database.
-func (s *FileStore) Stats(ctx context.Context) (urls int, users int, err error) {
-	// log := logger.WithContext(ctx)
+func (s *FileStore) Stats(ctx context.Context) (int, int, error) {
+	log := logger.WithContext(ctx)
+	urls := len(s.urls)
+	users := make(map[string]string)
 
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
+	for user := range s.users {
+		users[user] = ""
+	}
 
-	// row := db.QueryRowContext(ctx, postgre.selectDBStatistics, key)
-	// var originalURL string
-	// var deleted bool
-
-	// err := row.Scan(&originalURL, &deleted)
-
-	// if err != nil {
-	// 	log.Error("Get", "err", err)
-	// 	return "", false
-	// }
-	// if deleted {
-	// 	return "", true
-	// }
-
-	return 1, 1, nil
+	log.Info("Stats", "urls", urls, "users", len(users))
+	return urls, len(users), nil
 }
 
 // getDirFromPath extracts the directory path from a full file path.
@@ -160,12 +207,6 @@ func createFile(storagePath string) error {
 	return nil
 }
 
-// itemURL represents the JSON structure used for file storage.
-type itemURL struct {
-	Hash string `json:"Hash"`
-	URL  string `json:"OriginalURL"`
-}
-
 // lineToJSON parses a line from the storage file into an itemURL struct.
 func lineToJSON(line string) itemURL {
 	req := itemURL{}
@@ -207,24 +248,36 @@ func getFileContent(storagePath string) map[string]string {
 // It ensures the storage directory and file exist, and loads any existing data.
 func NewFileStore(storagePath string) Storage {
 	log := logger.Get()
+	usersFile := storagePath + "/users_list.json"
+	urlsFile := storagePath + "/urls_list.json"
+
 	createDir(storagePath)
 
-	err := createFile(storagePath)
+	err := createFile(usersFile)
 	if err != nil {
-		log.Error("NewFileStore", "createFile", err)
+		log.Error("NewFileStore", "create usersFile", err)
 		panic(fmt.Errorf("can't create file store: %w", err))
 	}
 
-	data := getFileContent(storagePath)
+	err = createFile(urlsFile)
+	if err != nil {
+		log.Error("NewFileStore", "create urlsFile", err)
+		panic(fmt.Errorf("can't create file store: %w", err))
+	}
+
+	urls := getFileContent(urlsFile)
+	users := getFileContent(usersFile)
 
 	return &FileStore{
-		pathToFile: storagePath,
-		s:          data,
+		usersFile: usersFile,
+		urlsFile:  urlsFile,
+		urls:      urls,
+		users:     users,
 	}
 }
 
 // WriteToFile appends a new URL mapping to the storage file in JSON format.
-func WriteToFile(key string, value string, pathToFile string) error {
+func WriteToFile(pathToFile string, json []byte) error {
 	log := logger.Get()
 
 	f, err := os.OpenFile(pathToFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
@@ -232,11 +285,6 @@ func WriteToFile(key string, value string, pathToFile string) error {
 		return err
 	}
 	defer f.Close()
-
-	json, err := json.Marshal(itemURL{Hash: key, URL: value})
-	if err != nil {
-		return err
-	}
 
 	if _, err = f.WriteString(string(json) + "\n"); err != nil {
 		return err
