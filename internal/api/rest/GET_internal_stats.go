@@ -31,7 +31,7 @@ func HandlerInternalStats() http.HandlerFunc {
 		ip := r.Header.Get("X-Real-IP")
 		isTrustedAddress := isIPInCIDR(ip, config.TrustedSubnet)
 
-		if isTrustedAddress == false {
+		if !isTrustedAddress {
 			http.Error(w, "wrong IP", http.StatusForbidden)
 			return
 		}

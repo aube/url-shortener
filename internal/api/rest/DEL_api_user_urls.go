@@ -8,8 +8,6 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-const numWorkers int = 10
-
 var usecasesDeleteURLS = usecases.DeleteURLS
 
 // HandlerAPIUserUrlsDel deletes multiple URLs for a user

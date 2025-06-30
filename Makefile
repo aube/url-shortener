@@ -46,7 +46,7 @@ cover:
 
 .PHONY: staticcheck
 staticcheck:
-	~/go/bin staticcheck ./...
+	staticcheck ./...
 
 .PHONY: protoc
 protoc:

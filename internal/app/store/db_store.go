@@ -217,6 +217,7 @@ func (s *DBStore) delByRow(ctx context.Context, hash string, userID string) erro
 	return nil
 }
 
+//lint:ignore U1000 Ignore unused function temporarily for debugging
 func (s *DBStore) delMultiple(ctx context.Context, hashes []string, userID string) error {
 	log := logger.WithContext(ctx)
 	values := make([]any, len(hashes)+1)      // array of query values
