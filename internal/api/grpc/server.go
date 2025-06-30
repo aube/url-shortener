@@ -1,3 +1,5 @@
+// Package grpcserver implements the gRPC service for URL shortening operations.
+// It provides both the service implementation and request validation middleware.
 package grpcserver
 
 import (
@@ -11,7 +13,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ValidationInterceptor validates incoming requests
+// ValidationInterceptor is a gRPC unary interceptor that validates incoming requests.
+// It checks for required fields and proper formatting before passing requests to handlers.
+// Returns gRPC errors for invalid requests.
 func ValidationInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	switch r := req.(type) {
 	case *proto.SaveURLRequest:
@@ -33,7 +37,9 @@ func ValidationInterceptor(ctx context.Context, req any, info *grpc.UnaryServerI
 	return handler(ctx, req)
 }
 
-// isValidURL performs basic URL validation
+// isValidURL performs basic URL validation.
+// Checks if the URL starts with http:// or https://.
+// Returns true if valid, false otherwise.
 func isValidURL(url string) bool {
 	return strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")
 }
@@ -43,11 +49,15 @@ type URLShortenerServer struct {
 	proto.UnimplementedUrlShortenerServer
 }
 
+// NewURLShortenerServer creates a new instance of the URLShortenerServer.
+// Returns a pointer to the initialized server.
 func NewURLShortenerServer() *URLShortenerServer {
 	return &URLShortenerServer{}
 }
 
-// SaveURL implements the SaveURL gRPC method
+// SaveURL implements the gRPC method to shorten a URL.
+// Takes a SaveURLRequest containing the original URL and base URL.
+// Returns a SaveURLResponse with the shortened URL or an error.
 func (s *URLShortenerServer) SaveURL(ctx context.Context, req *proto.SaveURLRequest) (*proto.SaveURLResponse, error) {
 	shortURL, err := usecases.SaveURL(ctx, []byte(req.OriginalUrl), req.BaseUrl)
 	if err != nil {
@@ -59,7 +69,9 @@ func (s *URLShortenerServer) SaveURL(ctx context.Context, req *proto.SaveURLRequ
 	}, nil
 }
 
-// GetURL implements the GetURL gRPC method
+// GetURL implements the gRPC method to retrieve the original URL.
+// Takes a GetURLRequest containing the shortened URL ID.
+// Returns a GetURLResponse with the original URL or an error if not found.
 func (s *URLShortenerServer) GetURL(ctx context.Context, req *proto.GetURLRequest) (*proto.GetURLResponse, error) {
 	originalURL, err := usecases.GetURL(ctx, req.Id)
 	if err != nil {

@@ -9,11 +9,16 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-// StorageSetMultiple interface
+// StorageSetMultiple defines the interface for storing multiple URLs at once.
 type StorageSetMultiple interface {
+	// SetMultiple stores a map of hashes to URLs in storage.
+	// Returns an error if the operation fails.
 	SetMultiple(context.Context, map[string]string) error
 }
 
+// SaveURLS stores multiple URLs in batch and returns their shortened versions.
+// The input is expected to be a JSON array of correlation IDs and original URLs.
+// Returns a JSON array of correlation IDs with shortened URLs or an error if the operation fails.
 func SaveURLS(ctx context.Context, body []byte, baseURL string) ([]byte, error) {
 	store := store.NewStore()
 	log := logger.WithContext(ctx)
@@ -43,9 +48,16 @@ func SaveURLS(ctx context.Context, body []byte, baseURL string) ([]byte, error) 
 
 }
 
+// inputBatchJSONItem represents a single input item in the batch save operation.
 type inputBatchJSONItem struct {
-	ID  string `json:"correlation_id"`
-	URL string `json:"original_url"`
+	ID  string `json:"correlation_id"` // The correlation ID for tracking
+	URL string `json:"original_url"`   // The original URL to shorten
+}
+
+// outputBatchJSONItem represents a single output item in the batch save operation.
+type outputBatchJSONItem struct {
+	ID    string `json:"correlation_id"` // The correlation ID from input
+	SHORT string `json:"short_url"`      // The generated shortened URL
 }
 
 func batch2JSON(body []byte) []inputBatchJSONItem {
@@ -59,11 +71,6 @@ func batch2JSON(body []byte) []inputBatchJSONItem {
 	}
 
 	return inputJSON
-}
-
-type outputBatchJSONItem struct {
-	ID    string `json:"correlation_id"`
-	SHORT string `json:"short_url"`
 }
 
 // JSON2Batch json.Marshal

@@ -8,11 +8,16 @@ import (
 	"github.com/aube/url-shortener/internal/logger"
 )
 
-// StorageDelete interface
+// StorageDelete defines the interface for deleting URLs from storage.
 type StorageDelete interface {
+	// Delete removes multiple URLs from storage based on their hashes.
+	// Returns an error if the operation fails.
 	Delete(c context.Context, l []string) error
 }
 
+// DeleteURLS handles the deletion of multiple URLs.
+// It unmarshals the request body into a slice of URL hashes and deletes them from storage.
+// Returns an error if the operation fails.
 func DeleteURLS(ctx context.Context, body []byte) error {
 	store := store.NewStore()
 	log := logger.WithContext(ctx)

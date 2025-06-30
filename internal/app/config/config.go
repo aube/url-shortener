@@ -1,3 +1,9 @@
+// Package config handles application configuration management.
+// It supports loading configuration from multiple sources with precedence:
+// 1. Command-line flags (highest priority)
+// 2. Environment variables
+// 3. Configuration file
+// 4. Default values (lowest priority)
 package config
 
 import (
@@ -8,7 +14,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// EnvConfig holds all configuration parameters for the application from env variables and config file.
+// EnvConfig holds all configuration parameters for the application.
+// Fields are tagged to support multiple configuration sources.
 type EnvConfig struct {
 	BaseURL               string `mapstructure:"base_url" env:"BASE_URL" json:"BASE_URL"`                                              // Base URL for shortened links
 	ServerAddress         string `mapstructure:"server_address" env:"SERVER_ADDRESS" json:"SERVER_ADDRESS"`                            // Server address to listen on
@@ -81,6 +88,8 @@ func NewConfig() EnvConfig {
 	return config
 }
 
+// SetGlobalConfig sets the global configuration instance.
+// This is primarily used for testing purposes to inject mock configurations.
 func SetGlobalConfig(cnf EnvConfig) {
 	config = cnf
 }
